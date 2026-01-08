@@ -1,4 +1,5 @@
 #include "app.hpp"
+#include "vocabulary.hpp"
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -51,9 +52,22 @@ bool App::initialize(const Config& config) {
     transcriber_->set_language(config_.language);
     transcriber_->set_translate(config_.translate);
     transcriber_->set_profile(get_profile(config_.model_quality));
-    if (!config_.initial_prompt.empty()) {
-        transcriber_->set_initial_prompt(config_.initial_prompt);
+
+    // Load user vocabulary and build initial prompt
+    auto user_vocab = VocabularyLoader::load_user_vocabulary();
+    std::string initial_prompt;
+    if (!user_vocab.empty()) {
+        initial_prompt = VocabularyLoader::build_initial_prompt(user_vocab, config_.initial_prompt);
+    } else {
+        initial_prompt = config_.initial_prompt;
     }
+    if (!initial_prompt.empty()) {
+        transcriber_->set_initial_prompt(initial_prompt);
+    }
+
+    // Create default vocabulary file if it doesn't exist (for user reference)
+    VocabularyLoader::create_default_vocabulary_file();
+
     std::cout << "Transcriber initialized (quality: " << get_profile(config_.model_quality).name << ")" << std::endl;
 
     // Initialize hotkey manager

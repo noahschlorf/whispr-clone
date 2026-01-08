@@ -44,6 +44,7 @@ set(SOURCES
     src/app.cpp
     src/text_processor.cpp
     src/audio_processor.cpp
+    src/vocabulary.cpp
 )
 
 set(HEADERS
@@ -55,6 +56,7 @@ set(HEADERS
     include/config.hpp
     include/text_processor.hpp
     include/audio_processor.hpp
+    include/vocabulary.hpp
 )
 
 # Main executable
