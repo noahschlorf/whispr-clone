@@ -31,6 +31,11 @@ inline const TranscriptionProfile PROFILE_BALANCED = {5, 5, 2.8f, 0.5f, 0.0f, "B
 inline const TranscriptionProfile PROFILE_ACCURATE = {5, 8, 3.0f, 0.4f, 0.0f, "Accurate"};
 inline const TranscriptionProfile PROFILE_BEST = {5, 10, 3.0f, 0.35f, 0.0f, "Best"};
 
+// Optimized profile based on OpenAI recommendations for maximum accuracy
+// Lower no_speech_thold (0.3) = more sensitive to speech
+// Higher beam_size (8) = better search but slower
+inline const TranscriptionProfile PROFILE_OPTIMIZED = {5, 8, 2.4f, 0.3f, 0.0f, "Optimized"};
+
 // Get profile for quality level
 inline const TranscriptionProfile& get_profile(ModelQuality quality) {
     switch (quality) {

@@ -90,6 +90,11 @@ TranscriptionResult Transcriber::transcribe_with_profile(const std::vector<float
     wparams.temperature           = profile.temperature;
     wparams.logprob_thold         = -1.0f;
 
+    // Optimized parameters based on OpenAI recommendations
+    wparams.temperature_inc       = 0.2f;   // Fallback temperature increment for retries
+    wparams.max_initial_ts        = 1.0f;   // Limit first timestamp to 1 second
+    wparams.token_timestamps      = true;   // Enable word-level timestamps for debugging
+
     // Initial prompt for context
     if (!initial_prompt_.empty()) {
         wparams.initial_prompt = initial_prompt_.c_str();
@@ -163,9 +168,9 @@ TranscriptionResult Transcriber::transcribe_adaptive(const std::vector<float>& a
     // If confidence is low and we're not already using the best profile, retry
     if (result.success && result.confidence < confidence_threshold && !result.text.empty()) {
         std::cout << "Low confidence (" << static_cast<int>(result.confidence * 100)
-                  << "%), retrying with Accurate profile..." << std::endl;
+                  << "%), retrying with Optimized profile..." << std::endl;
 
-        auto retry_result = transcribe_with_profile(audio, PROFILE_ACCURATE);
+        auto retry_result = transcribe_with_profile(audio, PROFILE_OPTIMIZED);
 
         // Use retry result if it's better
         if (retry_result.success && retry_result.confidence > result.confidence) {
