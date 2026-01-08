@@ -73,10 +73,12 @@ TranscriptionResult Transcriber::transcribe_with_profile(const std::vector<float
     wparams.print_realtime   = false;
     wparams.print_timestamps = false;
     wparams.translate        = translate_;
-    wparams.single_segment   = true;   // Faster for short audio
+    wparams.single_segment   = false;  // Allow multiple segments for better accuracy
     wparams.no_context       = initial_prompt_.empty();  // Use context if prompt provided
     wparams.language         = language_.c_str();
     wparams.n_threads        = n_threads_;
+    wparams.suppress_blank   = true;   // Suppress blank outputs
+    wparams.suppress_nst     = true;   // Suppress non-speech tokens
 
     // Apply profile settings
     wparams.greedy.best_of        = profile.best_of;

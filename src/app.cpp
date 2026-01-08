@@ -181,6 +181,24 @@ void App::stop_recording() {
         audio_processor_->reset();  // Reset filter state for next recording
     }
 
+    // Trim silence from start/end for better accuracy
+    if (config_.trim_silence) {
+        int min_silence_samples = (config_.min_silence_ms * config_.sample_rate) / 1000;
+        audio_data = AudioProcessor::trim_silence(
+            audio_data,
+            config_.silence_threshold,
+            min_silence_samples,
+            config_.sample_rate
+        );
+
+        if (audio_data.empty()) {
+            std::cerr << "No speech detected in recording" << std::endl;
+            state_.store(AppState::Idle);
+            update_tray_state(AppState::Idle);
+            return;
+        }
+    }
+
     // Transcribe (use adaptive mode if enabled)
     TranscriptionResult result;
     if (config_.adaptive_quality) {

@@ -128,4 +128,61 @@ void AudioProcessor::apply_normalization(std::vector<float>& audio) {
     }
 }
 
+std::vector<float> AudioProcessor::trim_silence(const std::vector<float>& audio,
+                                                  float threshold,
+                                                  int min_silence_samples,
+                                                  int sample_rate) {
+    if (audio.empty()) return audio;
+
+    // Use a sliding window to detect voice activity
+    int window_size = sample_rate / 100;  // 10ms window
+    if (window_size < 1) window_size = 1;
+
+    // Find start of speech (first window above threshold)
+    size_t start_idx = 0;
+    for (size_t i = 0; i + window_size <= audio.size(); i += window_size / 2) {
+        // Calculate RMS energy of window
+        float sum_sq = 0.0f;
+        for (size_t j = i; j < i + window_size && j < audio.size(); ++j) {
+            sum_sq += audio[j] * audio[j];
+        }
+        float rms = std::sqrt(sum_sq / window_size);
+
+        if (rms > threshold) {
+            // Found speech, back up a bit for attack
+            start_idx = (i > static_cast<size_t>(min_silence_samples / 2))
+                        ? i - min_silence_samples / 2 : 0;
+            break;
+        }
+    }
+
+    // Find end of speech (last window above threshold)
+    size_t end_idx = audio.size();
+    for (size_t i = audio.size(); i >= window_size; i -= window_size / 2) {
+        size_t win_start = i - window_size;
+
+        // Calculate RMS energy of window
+        float sum_sq = 0.0f;
+        for (size_t j = win_start; j < i && j < audio.size(); ++j) {
+            sum_sq += audio[j] * audio[j];
+        }
+        float rms = std::sqrt(sum_sq / window_size);
+
+        if (rms > threshold) {
+            // Found speech, add some tail for release
+            end_idx = std::min(i + min_silence_samples / 2, audio.size());
+            break;
+        }
+    }
+
+    // Sanity checks
+    if (start_idx >= end_idx || end_idx - start_idx < static_cast<size_t>(sample_rate / 10)) {
+        // Less than 100ms of audio or invalid range, return original
+        return audio;
+    }
+
+    // Return trimmed audio
+    return std::vector<float>(audio.begin() + start_idx, audio.begin() + end_idx);
+}
+
 } // namespace whispr

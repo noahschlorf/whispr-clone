@@ -38,6 +38,13 @@ public:
     void apply_noise_gate(std::vector<float>& audio);
     void apply_normalization(std::vector<float>& audio);
 
+    // VAD: Trim silence from start and end of audio
+    // Returns trimmed audio (or original if no significant silence found)
+    static std::vector<float> trim_silence(const std::vector<float>& audio,
+                                           float threshold = 0.01f,
+                                           int min_silence_samples = 1600,  // 100ms at 16kHz
+                                           int sample_rate = 16000);
+
     // Reset filter state (call between recordings)
     void reset();
 

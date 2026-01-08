@@ -24,10 +24,12 @@ struct TranscriptionProfile {
 };
 
 // Predefined profiles
+// best_of: number of candidates, beam_size: beam search width
+// entropy_thold: skip if entropy > threshold, no_speech_thold: skip if no_speech prob > threshold
 inline const TranscriptionProfile PROFILE_FAST = {1, 1, 2.4f, 0.6f, 0.0f, "Fast"};
-inline const TranscriptionProfile PROFILE_BALANCED = {3, 3, 2.6f, 0.55f, 0.0f, "Balanced"};
-inline const TranscriptionProfile PROFILE_ACCURATE = {5, 5, 2.8f, 0.5f, 0.0f, "Accurate"};
-inline const TranscriptionProfile PROFILE_BEST = {5, 5, 2.8f, 0.45f, 0.0f, "Best"};
+inline const TranscriptionProfile PROFILE_BALANCED = {5, 5, 2.8f, 0.5f, 0.0f, "Balanced"};  // More accurate than before
+inline const TranscriptionProfile PROFILE_ACCURATE = {5, 8, 3.0f, 0.4f, 0.0f, "Accurate"};
+inline const TranscriptionProfile PROFILE_BEST = {5, 10, 3.0f, 0.35f, 0.0f, "Best"};
 
 // Get profile for quality level
 inline const TranscriptionProfile& get_profile(ModelQuality quality) {
@@ -59,7 +61,7 @@ struct Config {
 
     // Whisper model
     std::string model_dir = "models";
-    ModelQuality model_quality = ModelQuality::Balanced;
+    ModelQuality model_quality = ModelQuality::Balanced;  // base.en model
     int n_threads = 4;              // CPU threads for inference
 
     // Get full model path based on quality
@@ -78,15 +80,18 @@ struct Config {
 
     // Performance & Accuracy
     bool use_gpu = true;            // Metal/CUDA acceleration
-    bool adaptive_quality = false;  // Auto-retry with higher quality if low confidence
+    bool adaptive_quality = true;   // Auto-retry with higher quality if low confidence
     bool translate = false;         // Just transcribe, don't translate
     std::string language = "en";    // English
 
     // Audio preprocessing
     bool audio_preprocessing = true;  // Enable noise reduction
+    bool trim_silence = true;         // Trim silence from start/end (VAD)
+    float silence_threshold = 0.01f;  // Silence detection threshold
+    int min_silence_ms = 100;         // Minimum silence duration to trim
 
-    // Initial prompt for context
-    std::string initial_prompt = "";
+    // Initial prompt for context (helps accuracy)
+    std::string initial_prompt = "The following is a clear transcription of speech.";
 };
 
 // Default hotkey codes
