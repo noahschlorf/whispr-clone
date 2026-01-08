@@ -16,20 +16,26 @@ void signal_handler(int signum) {
 void print_usage(const char* program) {
     std::cout << "Usage: " << program << " [options]\n"
               << "\nOptions:\n"
-              << "  -m, --model PATH    Path to whisper model (default: models/ggml-base.en.bin)\n"
+              << "  -q, --quality MODE  Quality mode: fast, balanced, accurate, best (default: balanced)\n"
+              << "  -m, --model-dir DIR Directory containing models (default: models)\n"
               << "  -t, --threads N     Number of CPU threads (default: 4)\n"
               << "  -l, --language LANG Language code (default: en)\n"
               << "  -k, --keycode N     Hotkey keycode (default: Right Option/Alt)\n"
               << "  --no-paste          Don't auto-paste, just copy to clipboard\n"
+              << "  --no-preprocess     Disable audio preprocessing\n"
               << "  -h, --help          Show this help\n"
+              << "\nQuality Modes:\n"
+              << "  fast     - Fastest, ~80% accuracy (tiny.en model)\n"
+              << "  balanced - Good balance, ~85% accuracy (base.en model)\n"
+              << "  accurate - High accuracy, ~92% accuracy (small.en model)\n"
+              << "  best     - Highest accuracy, ~95% accuracy (medium.en model)\n"
               << "\nHotkey:\n"
               << "  Hold the configured key to record, release to transcribe and paste.\n"
               << "  Default: Right Option (macOS) or Right Alt (Linux)\n"
               << "\nFirst run:\n"
-              << "  1. Download a whisper model:\n"
-              << "     curl -L -o models/ggml-base.en.bin \\\n"
-              << "       https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin\n"
-              << "  2. Grant accessibility permissions (macOS) or run with input group (Linux)\n"
+              << "  Download models with: ./scripts/download_models.sh\n"
+              << "  Or manually: curl -L -o models/ggml-base.en.bin \\\n"
+              << "    https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin\n"
               << std::endl;
 }
 
@@ -42,8 +48,24 @@ int main(int argc, char* argv[]) {
             print_usage(argv[0]);
             return 0;
         }
-        else if ((strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--model") == 0) && i + 1 < argc) {
-            config.model_path = argv[++i];
+        else if ((strcmp(argv[i], "-q") == 0 || strcmp(argv[i], "--quality") == 0) && i + 1 < argc) {
+            const char* mode = argv[++i];
+            if (strcmp(mode, "fast") == 0) {
+                config.model_quality = whispr::ModelQuality::Fast;
+            } else if (strcmp(mode, "balanced") == 0) {
+                config.model_quality = whispr::ModelQuality::Balanced;
+            } else if (strcmp(mode, "accurate") == 0) {
+                config.model_quality = whispr::ModelQuality::Accurate;
+            } else if (strcmp(mode, "best") == 0) {
+                config.model_quality = whispr::ModelQuality::Best;
+            } else {
+                std::cerr << "Unknown quality mode: " << mode << std::endl;
+                print_usage(argv[0]);
+                return 1;
+            }
+        }
+        else if ((strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--model-dir") == 0) && i + 1 < argc) {
+            config.model_dir = argv[++i];
         }
         else if ((strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--threads") == 0) && i + 1 < argc) {
             config.n_threads = std::atoi(argv[++i]);
@@ -56,6 +78,9 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "--no-paste") == 0) {
             config.auto_paste = false;
+        }
+        else if (strcmp(argv[i], "--no-preprocess") == 0) {
+            config.audio_preprocessing = false;
         }
         else {
             std::cerr << "Unknown option: " << argv[i] << std::endl;
@@ -73,10 +98,12 @@ int main(int argc, char* argv[]) {
     g_app = &app;
 
     std::cout << "Whispr Clone - Voice to Text\n" << std::endl;
-    std::cout << "Model: " << config.model_path << std::endl;
+    std::cout << "Quality: " << whispr::get_profile(config.model_quality).name << std::endl;
+    std::cout << "Model: " << config.get_model_path() << std::endl;
     std::cout << "Threads: " << config.n_threads << std::endl;
     std::cout << "Language: " << config.language << std::endl;
     std::cout << "Auto-paste: " << (config.auto_paste ? "yes" : "no") << std::endl;
+    std::cout << "Audio preprocessing: " << (config.audio_preprocessing ? "yes" : "no") << std::endl;
     std::cout << std::endl;
 
     if (!app.initialize(config)) {

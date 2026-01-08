@@ -52,7 +52,11 @@ static void initializeIcons() {
     });
 }
 
+// Track current quality mode
+static whispr::ModelQuality g_current_quality = whispr::ModelQuality::Balanced;
+
 @interface WhisprAppDelegate : NSObject <NSApplicationDelegate>
+- (void)updateQualityMenu;
 @end
 
 @implementation WhisprAppDelegate
@@ -78,6 +82,7 @@ static void initializeIcons() {
 
             NSMenu *menu = [[NSMenu alloc] init];
 
+            // Status item
             NSMenuItem *statusItem = [[NSMenuItem alloc] initWithTitle:@"Whispr - Ready" action:nil keyEquivalent:@""];
             statusItem.enabled = NO;
             statusItem.tag = 100;
@@ -85,6 +90,38 @@ static void initializeIcons() {
 
             [menu addItem:[NSMenuItem separatorItem]];
 
+            // Quality submenu
+            NSMenuItem *qualityMenuItem = [[NSMenuItem alloc] initWithTitle:@"Quality" action:nil keyEquivalent:@""];
+            NSMenu *qualityMenu = [[NSMenu alloc] init];
+
+            NSMenuItem *fastItem = [[NSMenuItem alloc] initWithTitle:@"Fast (tiny.en)" action:@selector(setQualityFast:) keyEquivalent:@""];
+            fastItem.target = self;
+            fastItem.tag = 200;
+            [qualityMenu addItem:fastItem];
+
+            NSMenuItem *balancedItem = [[NSMenuItem alloc] initWithTitle:@"Balanced (base.en)" action:@selector(setQualityBalanced:) keyEquivalent:@""];
+            balancedItem.target = self;
+            balancedItem.tag = 201;
+            balancedItem.state = NSControlStateValueOn;  // Default
+            [qualityMenu addItem:balancedItem];
+
+            NSMenuItem *accurateItem = [[NSMenuItem alloc] initWithTitle:@"Accurate (small.en)" action:@selector(setQualityAccurate:) keyEquivalent:@""];
+            accurateItem.target = self;
+            accurateItem.tag = 202;
+            [qualityMenu addItem:accurateItem];
+
+            NSMenuItem *bestItem = [[NSMenuItem alloc] initWithTitle:@"Best (medium.en)" action:@selector(setQualityBest:) keyEquivalent:@""];
+            bestItem.target = self;
+            bestItem.tag = 203;
+            [qualityMenu addItem:bestItem];
+
+            qualityMenuItem.submenu = qualityMenu;
+            qualityMenuItem.tag = 300;
+            [menu addItem:qualityMenuItem];
+
+            [menu addItem:[NSMenuItem separatorItem]];
+
+            // Quit item
             NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit Whispr" action:@selector(quitApp:) keyEquivalent:@"q"];
             quitItem.target = self;
             [menu addItem:quitItem];
@@ -100,6 +137,57 @@ static void initializeIcons() {
             NSLog(@"Failed to create status bar item");
         }
     });
+}
+
+- (void)updateQualityMenu {
+    if (!g_status_item || !g_status_item.menu) return;
+
+    NSMenuItem *qualityMenuItem = [g_status_item.menu itemWithTag:300];
+    if (!qualityMenuItem || !qualityMenuItem.submenu) return;
+
+    // Reset all checkmarks
+    for (NSMenuItem *item in qualityMenuItem.submenu.itemArray) {
+        item.state = NSControlStateValueOff;
+    }
+
+    // Set current checkmark
+    NSInteger tag = 200 + static_cast<NSInteger>(g_current_quality);
+    NSMenuItem *currentItem = [qualityMenuItem.submenu itemWithTag:tag];
+    if (currentItem) {
+        currentItem.state = NSControlStateValueOn;
+    }
+
+    // Update quality name in main menu
+    const char* qualityName = whispr::get_profile(g_current_quality).name;
+    qualityMenuItem.title = [NSString stringWithFormat:@"Quality: %s", qualityName];
+}
+
+- (void)setQualityFast:(id)sender {
+    (void)sender;
+    g_current_quality = whispr::ModelQuality::Fast;
+    [self updateQualityMenu];
+    NSLog(@"Quality set to Fast");
+}
+
+- (void)setQualityBalanced:(id)sender {
+    (void)sender;
+    g_current_quality = whispr::ModelQuality::Balanced;
+    [self updateQualityMenu];
+    NSLog(@"Quality set to Balanced");
+}
+
+- (void)setQualityAccurate:(id)sender {
+    (void)sender;
+    g_current_quality = whispr::ModelQuality::Accurate;
+    [self updateQualityMenu];
+    NSLog(@"Quality set to Accurate");
+}
+
+- (void)setQualityBest:(id)sender {
+    (void)sender;
+    g_current_quality = whispr::ModelQuality::Best;
+    [self updateQualityMenu];
+    NSLog(@"Quality set to Best");
 }
 
 - (void)quitApp:(id)sender {

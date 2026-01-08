@@ -5,6 +5,7 @@
 #include "transcriber.hpp"
 #include "hotkey_manager.hpp"
 #include "clipboard.hpp"
+#include "audio_processor.hpp"
 
 #include <memory>
 #include <atomic>
@@ -50,6 +51,7 @@ private:
     std::unique_ptr<AudioCapture> audio_;
     std::unique_ptr<Transcriber> transcriber_;
     std::unique_ptr<HotkeyManager> hotkey_;
+    std::unique_ptr<AudioProcessor> audio_processor_;
 
     std::atomic<AppState> state_{AppState::Idle};
     std::atomic<bool> should_quit_{false};

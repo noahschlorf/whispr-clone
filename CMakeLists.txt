@@ -43,6 +43,7 @@ set(SOURCES
     src/clipboard.cpp
     src/app.cpp
     src/text_processor.cpp
+    src/audio_processor.cpp
 )
 
 set(HEADERS
@@ -53,6 +54,7 @@ set(HEADERS
     include/app.hpp
     include/config.hpp
     include/text_processor.hpp
+    include/audio_processor.hpp
 )
 
 # Main executable

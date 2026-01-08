@@ -34,16 +34,27 @@ bool App::initialize(const Config& config) {
     }
     std::cout << "Audio capture initialized" << std::endl;
 
+    // Initialize audio processor if enabled
+    if (config_.audio_preprocessing) {
+        audio_processor_ = std::make_unique<AudioProcessor>(
+            static_cast<float>(config_.sample_rate)
+        );
+        std::cout << "Audio preprocessing enabled" << std::endl;
+    }
+
     // Initialize transcriber
     transcriber_ = std::make_unique<Transcriber>();
-    if (!transcriber_->initialize(config_.model_path, config_.n_threads)) {
+    if (!transcriber_->initialize(config_.get_model_path(), config_.n_threads)) {
         std::cerr << "Failed to initialize transcriber" << std::endl;
         return false;
     }
     transcriber_->set_language(config_.language);
     transcriber_->set_translate(config_.translate);
-    transcriber_->set_beam_size(config_.beam_size);
-    std::cout << "Transcriber initialized" << std::endl;
+    transcriber_->set_profile(get_profile(config_.model_quality));
+    if (!config_.initial_prompt.empty()) {
+        transcriber_->set_initial_prompt(config_.initial_prompt);
+    }
+    std::cout << "Transcriber initialized (quality: " << get_profile(config_.model_quality).name << ")" << std::endl;
 
     // Initialize hotkey manager
     hotkey_ = std::make_unique<HotkeyManager>();
@@ -164,8 +175,19 @@ void App::stop_recording() {
         return;
     }
 
-    // Transcribe (this blocks but is fast with optimized settings)
-    auto result = transcriber_->transcribe(audio_data);
+    // Preprocess audio if enabled
+    if (audio_processor_) {
+        audio_processor_->process(audio_data);
+        audio_processor_->reset();  // Reset filter state for next recording
+    }
+
+    // Transcribe (use adaptive mode if enabled)
+    TranscriptionResult result;
+    if (config_.adaptive_quality) {
+        result = transcriber_->transcribe_adaptive(audio_data);
+    } else {
+        result = transcriber_->transcribe(audio_data);
+    }
 
     if (result.success && !result.text.empty()) {
         on_transcription_complete(result.text);
