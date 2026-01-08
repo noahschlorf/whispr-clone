@@ -28,71 +28,72 @@ int main() {
     std::cout << "========================================\n\n";
 
     // Test scenarios from Ralph Wiggum plan
+    // NOTE: ensure_punctuation adds trailing period if missing
     std::vector<TestCase> test_cases = {
         // 1. Basic transcription (should preserve normal text)
-        {"Basic transcription", "Hello world", "Hello world"},
+        {"Basic transcription", "Hello world", "Hello world."},
         {"Basic sentence", "This is a test sentence.", "This is a test sentence."},
 
         // 2. Filler removal
-        {"Filler: um at start", "Um, I think we should go", "I think we should go"},
-        {"Filler: uh in middle", "It's, uh, complicated", "It's complicated"},
-        {"Filler: umm variant", "Umm, let me think", "Let me think"},
-        {"Filler: uhh variant", "Uhh, I don't know", "I don't know"},
-        {"Filler: er", "I, er, forgot", "I forgot"},
-        {"Filler: ah", "Ah, yes of course", "Yes of course"},
-        {"Filler: you know start", "You know, it's really good", "It's really good"},
-        {"Filler: you know middle", "It's, you know, complicated", "It's complicated"},
-        {"Filler: I mean start", "I mean, it works", "It works"},
-        {"Filler: basically start", "Basically, we need to go", "We need to go"},
-        {"Filler: actually start", "Actually, I changed my mind", "I changed my mind"},
-        {"Filler: like filler", "I was, like, going", "I was going"},
-        {"Filler: so start", "So, what do you think", "What do you think"},
+        {"Filler: um at start", "Um, I think we should go", "I think we should go."},
+        {"Filler: uh in middle", "It's, uh, complicated", "It's complicated."},
+        {"Filler: umm variant", "Umm, let me think", "Let me think."},
+        {"Filler: uhh variant", "Uhh, I don't know", "I don't know."},
+        {"Filler: er", "I, er, forgot", "I forgot."},
+        {"Filler: ah", "Ah, yes of course", "Yes of course."},
+        {"Filler: you know start", "You know, it's really good", "It's really good."},
+        {"Filler: you know middle", "It's, you know, complicated", "It's complicated."},
+        {"Filler: I mean start", "I mean, it works", "It works."},
+        {"Filler: basically start", "Basically, we need to go", "We need to go."},
+        {"Filler: actually start", "Actually, I changed my mind", "I changed my mind."},
+        {"Filler: like filler", "I was, like, going", "I was going."},
+        {"Filler: so start", "So, what do you think", "What do you think."},
         {"Filler: right at end", "That makes sense, right?", "That makes sense."},
-        {"Filler: multiple fillers", "Um, I, uh, you know, think so", "I think so"},
+        {"Filler: multiple fillers", "Um, I, uh, you know, think so", "I think so."},
 
         // 3. Capitalization
-        {"Capitalize: first letter", "hello world", "Hello world"},
-        {"Capitalize: after period", "hello. how are you", "Hello. How are you"},
-        {"Capitalize: after question", "what? why not", "What? Why not"},
-        {"Capitalize: after exclamation", "wow! that's great", "Wow! That's great"},
-        {"Capitalize: standalone i", "i think i should go", "I think I should go"},
-        {"Capitalize: i'm contraction", "i'm going to the store", "I'm going to the store"},
-        {"Capitalize: i've contraction", "i've been there before", "I've been there before"},
-        {"Capitalize: i'll contraction", "i'll do it tomorrow", "I'll do it tomorrow"},
-        {"Capitalize: i'd contraction", "i'd like that", "I'd like that"},
+        {"Capitalize: first letter", "hello world", "Hello world."},
+        {"Capitalize: after period", "hello. how are you", "Hello. How are you."},
+        {"Capitalize: after question", "what? why not", "What? Why not."},
+        {"Capitalize: after exclamation", "wow! that's great", "Wow! That's great."},
+        {"Capitalize: standalone i", "i think i should go", "I think I should go."},
+        {"Capitalize: i'm contraction", "i'm going to the store", "I'm going to the store."},
+        {"Capitalize: i've contraction", "i've been there before", "I've been there before."},
+        {"Capitalize: i'll contraction", "i'll do it tomorrow", "I'll do it tomorrow."},
+        {"Capitalize: i'd contraction", "i'd like that", "I'd like that."},
 
         // 4. Spacing
-        {"Spacing: double space", "hello  world", "Hello world"},
-        {"Spacing: triple space", "hello   world", "Hello world"},
-        {"Spacing: leading space", " hello world", "Hello world"},
-        {"Spacing: trailing space", "hello world ", "Hello world"},
-        {"Spacing: both ends", "  hello world  ", "Hello world"},
-        {"Spacing: before comma", "hello , world", "Hello, world"},
+        {"Spacing: double space", "hello  world", "Hello world."},
+        {"Spacing: triple space", "hello   world", "Hello world."},
+        {"Spacing: leading space", " hello world", "Hello world."},
+        {"Spacing: trailing space", "hello world ", "Hello world."},
+        {"Spacing: both ends", "  hello world  ", "Hello world."},
+        {"Spacing: before comma", "hello , world", "Hello, world."},
         {"Spacing: before period", "hello .", "Hello."},
-        {"Spacing: after comma no space", "hello,world", "Hello, world"},
-        {"Spacing: after period no space", "hello.world", "Hello. World"},
+        {"Spacing: after comma no space", "hello,world", "Hello, world."},
+        {"Spacing: after period no space", "hello.world", "Hello. World."},
 
         // 5. Empty and edge cases
         {"Edge: empty string", "", ""},
-        {"Edge: single word", "hello", "Hello"},
-        {"Edge: single letter", "a", "A"},
+        {"Edge: single word", "hello", "Hello."},
+        {"Edge: single letter", "a", "A."},
         {"Edge: just filler", "um", ""},
         {"Edge: just spaces", "   ", ""},
-        {"Edge: numbers only", "123", "123"},
+        {"Edge: numbers only", "123", "123."},
         {"Edge: punctuation only", "...", "..."},
 
         // 7. Mixed content (complex real-world scenarios)
         {"Mixed: pizza example", "I, like, really like pizza, you know?", "I really like pizza?"},  // Keep ? since it was a question
-        {"Mixed: complex fillers", "Um, so, basically, I think, you know, we should go", "I think we should go"},
-        {"Mixed: normal like preserved", "I like to eat pizza", "I like to eat pizza"},
-        {"Mixed: comparison like", "It's like a big house", "It's like a big house"},
+        {"Mixed: complex fillers", "Um, so, basically, I think, you know, we should go", "I think we should go."},
+        {"Mixed: normal like preserved", "I like to eat pizza", "I like to eat pizza."},
+        {"Mixed: comparison like", "It's like a big house", "It's like a big house."},
         // Note: "so" stays because its comma was consumed when ", um," was removed
-        {"Mixed: real speech", "so, um, i was thinking that, like, maybe we should, you know, go to the store", "So I was thinking that maybe we should go to the store"},
-        {"Mixed: professional", "basically, the project is on track, you know, and i think we'll finish soon", "The project is on track and I think we'll finish soon"},
+        {"Mixed: real speech", "so, um, i was thinking that, like, maybe we should, you know, go to the store", "So I was thinking that maybe we should go to the store."},
+        {"Mixed: professional", "basically, the project is on track, you know, and i think we'll finish soon", "The project is on track and I think we'll finish soon."},
 
         // Additional edge cases
-        {"Edge: all caps preserved", "I think NASA is great", "I think NASA is great"},
-        {"Edge: acronym", "The CEO made an announcement", "The CEO made an announcement"},
+        {"Edge: all caps preserved", "I think NASA is great", "I think NASA is great."},
+        {"Edge: acronym", "The CEO made an announcement", "The CEO made an announcement."},
         {"Edge: multiple sentences", "hello. this is a test. how are you?", "Hello. This is a test. How are you?"},
     };
 

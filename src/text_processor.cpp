@@ -12,7 +12,7 @@ std::string TextProcessor::process(const std::string& text) const {
 
     std::string result = text;
 
-    // Order matters: remove fillers first, then fix spacing, then capitalize
+    // Order matters: remove fillers first, then fix spacing, then capitalize, then punctuation
     if (config_.remove_fillers) {
         result = remove_filler_words(result);
     }
@@ -29,6 +29,10 @@ std::string TextProcessor::process(const std::string& text) const {
         result = trim(result);
     }
 
+    if (config_.ensure_punctuation) {
+        result = ensure_punctuation(result);
+    }
+
     return result;
 }
 
@@ -36,8 +40,9 @@ std::string TextProcessor::remove_filler_words(const std::string& text) const {
     std::string result = text;
 
     // Helper regex patterns (static for performance)
+    // Extended um/uh/er/ah patterns - catches "um", "umm", "ummm", "uh", "uhh", "uhhh", etc.
     static const std::regex simple_fillers_with_comma(
-        R"(,?\s*\b[Uu]+[HhMm]+\b,?\s*|,?\s*\b[Ee]+[Rr]+\b,?\s*|,?\s*\b[Aa]+[Hh]+\b,?\s*)",
+        R"(,?\s*\b[Uu]+[HhMm]+\b,?\s*|,?\s*\b[Uu]+[Hh]+\b,?\s*|,?\s*\b[Ee]+[Rr]+\b,?\s*|,?\s*\b[Aa]+[Hh]+\b,?\s*|,?\s*\b[Hh][Mm]+\b,?\s*)",
         std::regex::ECMAScript
     );
     static const std::regex you_know(
@@ -48,9 +53,42 @@ std::string TextProcessor::remove_filler_words(const std::string& text) const {
         R"((^|[.!?]\s*)[Ii] mean,?\s*)",
         std::regex::ECMAScript
     );
+    // Catch ", like," and also " like " when preceded by certain words (filler pattern)
     static const std::regex like_filler_commas(
         R"(,\s*like,\s*)",
         std::regex::ECMAScript | std::regex::icase
+    );
+    // Catch "like" as filler in specific safe patterns:
+    // - "was like" when not followed by "a/an/the" (comparison)
+    // - "is like" when not followed by "a/an/the"
+    static const std::regex like_filler_after_words(
+        R"(\b(was|is)\s+like\s+(?!(a|an|the|that|this|what|how|who)\b))",
+        std::regex::ECMAScript | std::regex::icase
+    );
+    // Catch "like" at start of sentence (filler)
+    static const std::regex like_start_filler(
+        R"(^[Ll]ike\s+(?=[a-z]))",
+        std::regex::ECMAScript
+    );
+    // Catch "so like" at start
+    static const std::regex so_like_start(
+        R"(^[Ss]o\s+like\s+)",
+        std::regex::ECMAScript
+    );
+    // Catch "and like" / "but like" / "or like" mid-sentence
+    static const std::regex conj_like_filler(
+        R"(\b(and|but|or)\s+like\s+(?=[a-z]))",
+        std::regex::ECMAScript | std::regex::icase
+    );
+    // Catch "should/could/would/might like <verb>" (filler before verb)
+    static const std::regex modal_like_verb(
+        R"(\b(should|could|would|might|must|can|will)\s+like\s+(?=[a-z]+\b))",
+        std::regex::ECMAScript | std::regex::icase
+    );
+    // Catch "so" at start when it's a filler (followed by common patterns)
+    static const std::regex so_start_filler(
+        R"(^[Ss]o\s+(?=I\s|we\s|you\s|they\s|he\s|she\s|it\s|the\s|a\s|an\s|basically|actually|um|uh))",
+        std::regex::ECMAScript
     );
     static const std::regex right_end(
         R"(,\s*right\s*[.?]?\s*$)",
@@ -60,23 +98,56 @@ std::string TextProcessor::remove_filler_words(const std::string& text) const {
     static const std::regex double_space(R"(\s{2,})");
     static const std::regex leading_ws(R"(^\s+)");
     static const std::regex orphan_comma_start(R"(^\s*,\s*)");
+    // Catch repeated/stuttered words (e.g., "I I" or "the the")
+    static const std::regex stuttered_words(
+        R"(\b(\w+)\s+\1\b)",
+        std::regex::ECMAScript | std::regex::icase
+    );
 
-    // Step 1: Remove simple fillers (um, uh, er, ah) with optional commas
-    result = std::regex_replace(result, simple_fillers_with_comma, " ");
+    // Run filler removal in a loop since removing one filler may expose another
+    bool filler_changed = true;
+    int filler_iterations = 0;
+    while (filler_changed && filler_iterations < 5) {
+        filler_changed = false;
+        filler_iterations++;
+        std::string prev = result;
 
-    // Step 2: Remove "you know" phrase
-    result = std::regex_replace(result, you_know, " ");
+        // Remove simple fillers (um, uh, uhh, er, ah, hmm)
+        result = std::regex_replace(result, simple_fillers_with_comma, " ");
+        // Remove "you know" phrase
+        result = std::regex_replace(result, you_know, " ");
+        // Remove "I mean" at start or after punctuation
+        result = std::regex_replace(result, i_mean, "$1");
+        // Remove ", like," as filler
+        result = std::regex_replace(result, like_filler_commas, " ");
+        // Remove "like" after was/is when not a comparison
+        result = std::regex_replace(result, like_filler_after_words, "$1 ");
+        // Remove "like" at sentence start
+        result = std::regex_replace(result, like_start_filler, "");
+        // Remove "so like" at start
+        result = std::regex_replace(result, so_like_start, "");
+        // Remove "and/but/or like" mid-sentence
+        result = std::regex_replace(result, conj_like_filler, "$1 ");
+        // Remove "should/could/would like" before verb
+        result = std::regex_replace(result, modal_like_verb, "$1 ");
+        // Remove "so" at start when it's a filler
+        result = std::regex_replace(result, so_start_filler, "");
+        // Clean up spacing
+        result = std::regex_replace(result, double_space, " ");
+        result = std::regex_replace(result, leading_ws, "");
 
-    // Step 3: Remove "I mean" at start or after punctuation
-    result = std::regex_replace(result, i_mean, "$1");
+        if (result != prev) {
+            filler_changed = true;
+        }
+    }
 
-    // Step 4: Remove ", like," as filler
-    result = std::regex_replace(result, like_filler_commas, " ");
-
-    // Step 5: Remove "right" at end (tag question filler)
+    // Remove "right" at end (tag question filler)
     result = std::regex_replace(result, right_end, ".");
 
-    // Step 6: Clean up spacing and commas
+    // Remove stuttered/repeated words
+    result = std::regex_replace(result, stuttered_words, "$1");
+
+    // Final cleanup of spacing and commas
     result = std::regex_replace(result, double_comma, ",");
     result = std::regex_replace(result, double_space, " ");
     result = std::regex_replace(result, leading_ws, "");
@@ -248,6 +319,29 @@ std::string TextProcessor::trim(const std::string& text) const {
     if (start >= end) return "";
 
     return text.substr(start, end - start);
+}
+
+std::string TextProcessor::ensure_punctuation(const std::string& text) const {
+    if (text.empty()) return text;
+
+    std::string result = text;
+
+    // Trim trailing whitespace first
+    while (!result.empty() && std::isspace(static_cast<unsigned char>(result.back()))) {
+        result.pop_back();
+    }
+
+    if (result.empty()) return result;
+
+    // Check if already ends with punctuation
+    char last = result.back();
+    if (last == '.' || last == '!' || last == '?' || last == ':' || last == ';') {
+        return result;
+    }
+
+    // Add period if text doesn't end with punctuation
+    result += '.';
+    return result;
 }
 
 } // namespace whispr

@@ -9,6 +9,7 @@ struct TextProcessorConfig {
     bool auto_capitalize = true;
     bool fix_spacing = true;
     bool trim_whitespace = true;
+    bool ensure_punctuation = true;  // Add period if sentence doesn't end with punctuation
 };
 
 class TextProcessor {
@@ -24,6 +25,7 @@ public:
     std::string fix_capitalization(const std::string& text) const;
     std::string fix_spacing(const std::string& text) const;
     std::string trim(const std::string& text) const;
+    std::string ensure_punctuation(const std::string& text) const;
 
     void set_config(const TextProcessorConfig& config) { config_ = config; }
     const TextProcessorConfig& get_config() const { return config_; }
