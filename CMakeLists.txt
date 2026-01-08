@@ -42,6 +42,7 @@ set(SOURCES
     src/hotkey_manager.cpp
     src/clipboard.cpp
     src/app.cpp
+    src/text_processor.cpp
 )
 
 set(HEADERS
@@ -51,6 +52,7 @@ set(HEADERS
     include/clipboard.hpp
     include/app.hpp
     include/config.hpp
+    include/text_processor.hpp
 )
 
 # Main executable

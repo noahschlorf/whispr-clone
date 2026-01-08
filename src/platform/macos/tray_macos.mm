@@ -135,50 +135,66 @@ void destroy_tray_icon() {
 }
 
 void update_tray_state(AppState state) {
-    if (!g_status_ready || !g_status_item) return;
+    if (!g_status_ready) return;
+
+    // Capture state for the block
+    AppState captured_state = state;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!g_status_ready || !g_status_item) return;
+        // Re-check on main thread and get a strong local reference
+        if (!g_status_ready) return;
+
+        NSStatusItem* statusItem = g_status_item;
+        if (!statusItem || ![statusItem isKindOfClass:[NSStatusItem class]]) {
+            NSLog(@"Warning: Invalid status item in update_tray_state");
+            return;
+        }
+
+        NSStatusBarButton* button = statusItem.button;
+        if (!button) {
+            NSLog(@"Warning: No button on status item");
+            return;
+        }
 
         NSImage* icon = nil;
         NSString* fallbackEmoji = @"🎤";
-        NSString* status = @"Whispr - Ready";
+        NSString* statusText = @"Whispr - Ready";
 
-        switch (state) {
+        switch (captured_state) {
             case AppState::Idle:
                 icon = g_icon_idle;
                 fallbackEmoji = @"🎤";
-                status = @"Whispr - Ready";
+                statusText = @"Whispr - Ready";
                 break;
             case AppState::Recording:
                 icon = g_icon_recording;
                 fallbackEmoji = @"🔴";
-                status = @"Recording...";
+                statusText = @"Recording...";
                 break;
             case AppState::Transcribing:
                 icon = g_icon_transcribing;
                 fallbackEmoji = @"⏳";
-                status = @"Transcribing...";
+                statusText = @"Transcribing...";
                 break;
             case AppState::Error:
                 icon = g_icon_error;
                 fallbackEmoji = @"⚠️";
-                status = @"Error";
+                statusText = @"Error";
                 break;
         }
 
         // Use SF Symbol image if available, otherwise fallback to emoji
         if (icon) {
-            g_status_item.button.image = icon;
-            g_status_item.button.title = @"";
+            button.image = icon;
+            button.title = @"";
         } else {
-            g_status_item.button.image = nil;
-            g_status_item.button.title = fallbackEmoji;
+            button.image = nil;
+            button.title = fallbackEmoji;
         }
 
-        NSMenuItem *statusItem = [g_status_item.menu itemWithTag:100];
-        if (statusItem) {
-            statusItem.title = status;
+        NSMenuItem *menuStatusItem = [statusItem.menu itemWithTag:100];
+        if (menuStatusItem) {
+            menuStatusItem.title = statusText;
         }
     });
 }
