@@ -92,8 +92,10 @@ struct Config {
     // Audio preprocessing
     bool audio_preprocessing = true;  // Enable noise reduction
     bool trim_silence = true;         // Trim silence from start/end (VAD)
+    bool enhanced_vad = true;         // Use enhanced multi-segment speech extraction
     float silence_threshold = 0.01f;  // Silence detection threshold
     int min_silence_ms = 100;         // Minimum silence duration to trim
+    int vad_padding_ms = 50;          // Padding around speech segments
 
     // Initial prompt for context (helps accuracy and vocabulary recognition)
     // Add proper nouns and technical terms you commonly use

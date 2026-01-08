@@ -181,15 +181,27 @@ void App::stop_recording() {
         audio_processor_->reset();  // Reset filter state for next recording
     }
 
-    // Trim silence from start/end for better accuracy
+    // Trim silence / extract speech for better accuracy
     if (config_.trim_silence) {
-        int min_silence_samples = (config_.min_silence_ms * config_.sample_rate) / 1000;
-        audio_data = AudioProcessor::trim_silence(
-            audio_data,
-            config_.silence_threshold,
-            min_silence_samples,
-            config_.sample_rate
-        );
+        if (config_.enhanced_vad) {
+            // Use enhanced VAD with multi-segment speech extraction
+            audio_data = AudioProcessor::extract_speech(
+                audio_data,
+                config_.silence_threshold * 1.5f,  // Slightly higher threshold for robustness
+                config_.min_silence_ms,
+                config_.vad_padding_ms,
+                config_.sample_rate
+            );
+        } else {
+            // Use simple start/end trimming
+            int min_silence_samples = (config_.min_silence_ms * config_.sample_rate) / 1000;
+            audio_data = AudioProcessor::trim_silence(
+                audio_data,
+                config_.silence_threshold,
+                min_silence_samples,
+                config_.sample_rate
+            );
+        }
 
         if (audio_data.empty()) {
             std::cerr << "No speech detected in recording" << std::endl;

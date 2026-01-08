@@ -53,6 +53,11 @@ void AudioProcessor::process(std::vector<float>& audio) {
         apply_noise_gate(audio);
     }
 
+    // Apply AGC before normalization for consistent levels
+    if (config_.enable_agc) {
+        apply_agc(audio);
+    }
+
     if (config_.enable_normalization) {
         apply_normalization(audio);
     }
@@ -128,6 +133,35 @@ void AudioProcessor::apply_normalization(std::vector<float>& audio) {
     }
 }
 
+void AudioProcessor::apply_agc(std::vector<float>& audio) {
+    if (audio.empty()) return;
+
+    // Calculate current RMS level
+    float sum_sq = 0.0f;
+    for (float sample : audio) {
+        sum_sq += sample * sample;
+    }
+    float rms = std::sqrt(sum_sq / audio.size());
+
+    // Avoid division by zero
+    if (rms < 0.0001f) return;  // Too quiet to process
+
+    // Calculate gain needed to reach target RMS
+    float gain = config_.agc_target_rms / rms;
+
+    // Clamp gain to configured limits
+    gain = std::max(config_.agc_min_gain, std::min(gain, config_.agc_max_gain));
+
+    // Apply gain with soft clipping
+    for (float& sample : audio) {
+        sample *= gain;
+        // Soft clip using tanh for natural compression
+        if (std::abs(sample) > 0.9f) {
+            sample = 0.9f * std::tanh(sample / 0.9f);
+        }
+    }
+}
+
 std::vector<float> AudioProcessor::trim_silence(const std::vector<float>& audio,
                                                   float threshold,
                                                   int min_silence_samples,
@@ -183,6 +217,141 @@ std::vector<float> AudioProcessor::trim_silence(const std::vector<float>& audio,
 
     // Return trimmed audio
     return std::vector<float>(audio.begin() + start_idx, audio.begin() + end_idx);
+}
+
+std::vector<float> AudioProcessor::calculate_energy(const std::vector<float>& audio,
+                                                     int window_size,
+                                                     int hop_size) {
+    if (audio.empty() || window_size <= 0) return {};
+
+    std::vector<float> energy;
+    energy.reserve(audio.size() / hop_size + 1);
+
+    for (size_t i = 0; i + window_size <= audio.size(); i += hop_size) {
+        float sum_sq = 0.0f;
+        for (size_t j = i; j < i + window_size; ++j) {
+            sum_sq += audio[j] * audio[j];
+        }
+        energy.push_back(std::sqrt(sum_sq / window_size));  // RMS
+    }
+
+    // Smooth the energy curve with a simple moving average
+    if (energy.size() > 3) {
+        std::vector<float> smoothed(energy.size());
+        for (size_t i = 0; i < energy.size(); ++i) {
+            float sum = 0.0f;
+            int count = 0;
+            for (int j = -2; j <= 2; ++j) {
+                int idx = static_cast<int>(i) + j;
+                if (idx >= 0 && idx < static_cast<int>(energy.size())) {
+                    sum += energy[idx];
+                    count++;
+                }
+            }
+            smoothed[i] = sum / count;
+        }
+        return smoothed;
+    }
+
+    return energy;
+}
+
+std::vector<float> AudioProcessor::extract_speech(const std::vector<float>& audio,
+                                                   float threshold,
+                                                   int min_speech_ms,
+                                                   int padding_ms,
+                                                   int sample_rate) {
+    if (audio.empty()) return audio;
+
+    int window_size = sample_rate / 100;  // 10ms
+    int hop_size = sample_rate / 200;     // 5ms
+
+    // Calculate smoothed energy envelope
+    auto energy = calculate_energy(audio, window_size, hop_size);
+    if (energy.empty()) return audio;
+
+    // Find speech segments (regions above threshold)
+    int min_speech_frames = (min_speech_ms * sample_rate) / (1000 * hop_size);
+    int padding_frames = (padding_ms * sample_rate) / (1000 * hop_size);
+
+    struct Segment {
+        size_t start;
+        size_t end;
+    };
+    std::vector<Segment> segments;
+
+    bool in_speech = false;
+    size_t speech_start = 0;
+    int consecutive_speech = 0;
+    int consecutive_silence = 0;
+
+    for (size_t i = 0; i < energy.size(); ++i) {
+        if (energy[i] > threshold) {
+            consecutive_speech++;
+            consecutive_silence = 0;
+
+            if (!in_speech && consecutive_speech >= 2) {
+                // Start of speech segment
+                in_speech = true;
+                speech_start = i > 1 ? i - 1 : 0;
+            }
+        } else {
+            consecutive_silence++;
+
+            if (in_speech && consecutive_silence >= 3) {
+                // End of speech segment
+                in_speech = false;
+                size_t speech_end = i;
+
+                // Only keep segments longer than minimum
+                if (speech_end - speech_start >= static_cast<size_t>(min_speech_frames)) {
+                    segments.push_back({speech_start, speech_end});
+                }
+                consecutive_speech = 0;
+            }
+        }
+    }
+
+    // Handle case where speech extends to end
+    if (in_speech) {
+        if (energy.size() - speech_start >= static_cast<size_t>(min_speech_frames)) {
+            segments.push_back({speech_start, energy.size()});
+        }
+    }
+
+    // If no valid segments found, return original
+    if (segments.empty()) {
+        return audio;
+    }
+
+    // Merge close segments and add padding
+    std::vector<Segment> merged_segments;
+    for (const auto& seg : segments) {
+        // Add padding
+        size_t padded_start = seg.start > static_cast<size_t>(padding_frames) ?
+                             seg.start - padding_frames : 0;
+        size_t padded_end = std::min(seg.end + padding_frames, energy.size());
+
+        // Check if we can merge with previous segment
+        if (!merged_segments.empty() && padded_start <= merged_segments.back().end) {
+            merged_segments.back().end = padded_end;
+        } else {
+            merged_segments.push_back({padded_start, padded_end});
+        }
+    }
+
+    // Convert frame indices to sample indices and extract audio
+    std::vector<float> result;
+    for (const auto& seg : merged_segments) {
+        size_t sample_start = seg.start * hop_size;
+        size_t sample_end = std::min(seg.end * hop_size + window_size, audio.size());
+
+        result.insert(result.end(),
+                     audio.begin() + sample_start,
+                     audio.begin() + sample_end);
+    }
+
+    return result.empty() ? audio : result;
 }
 
 } // namespace whispr

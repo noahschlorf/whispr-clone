@@ -20,6 +20,12 @@ struct AudioProcessorConfig {
     // Normalization for consistent levels
     bool enable_normalization = true;
     float target_peak = 0.9f;  // Peak normalization target
+
+    // Automatic Gain Control (AGC) for consistent volume
+    bool enable_agc = true;
+    float agc_target_rms = 0.15f;   // Target RMS level (~-16dB)
+    float agc_max_gain = 10.0f;     // Max gain (20dB)
+    float agc_min_gain = 0.1f;      // Min gain (-20dB, to prevent clipping loud speech)
 };
 
 // Audio preprocessing for improved transcription accuracy
@@ -37,6 +43,7 @@ public:
     void apply_highpass(std::vector<float>& audio);
     void apply_noise_gate(std::vector<float>& audio);
     void apply_normalization(std::vector<float>& audio);
+    void apply_agc(std::vector<float>& audio);
 
     // VAD: Trim silence from start and end of audio
     // Returns trimmed audio (or original if no significant silence found)
@@ -44,6 +51,19 @@ public:
                                            float threshold = 0.01f,
                                            int min_silence_samples = 1600,  // 100ms at 16kHz
                                            int sample_rate = 16000);
+
+    // Enhanced VAD: Extract speech segments with better detection
+    // Returns concatenated speech segments with padding
+    static std::vector<float> extract_speech(const std::vector<float>& audio,
+                                             float threshold = 0.015f,
+                                             int min_speech_ms = 100,
+                                             int padding_ms = 50,
+                                             int sample_rate = 16000);
+
+    // Calculate short-term energy with smoothing
+    static std::vector<float> calculate_energy(const std::vector<float>& audio,
+                                               int window_size = 160,  // 10ms at 16kHz
+                                               int hop_size = 80);     // 5ms hop
 
     // Reset filter state (call between recordings)
     void reset();
