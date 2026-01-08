@@ -231,7 +231,7 @@ void App::on_transcription_complete(const std::string& text) {
         // Set clipboard and paste
         if (Clipboard::set_text(text)) {
             // Delay to ensure clipboard is fully set before pasting
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             Clipboard::paste();
         } else {
             std::cerr << "Failed to set clipboard" << std::endl;
