@@ -9,6 +9,9 @@ extern "C" void run_macos_event_loop();
 
 namespace whispr {
 
+// Minimum time between recordings (ms) to prevent rapid re-recording glitches
+static constexpr int64_t MIN_RECORDING_INTERVAL_MS = 100;
+
 App::App() = default;
 
 App::~App() {
@@ -127,6 +130,14 @@ void App::on_hotkey(bool pressed) {
 void App::start_recording() {
     if (state_.load() != AppState::Idle) return;
 
+    // Check cooldown to prevent rapid re-recording glitches
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now - last_recording_end_).count();
+    if (elapsed < MIN_RECORDING_INTERVAL_MS && last_recording_end_.time_since_epoch().count() > 0) {
+        return;  // Too soon after last recording
+    }
+
     std::cout << "Recording..." << std::endl;
     state_.store(AppState::Recording);
     update_tray_state(AppState::Recording);
@@ -162,6 +173,9 @@ void App::stop_recording() {
         std::cerr << "Transcription failed: " << result.error << std::endl;
     }
 
+    // Record timestamp for cooldown check
+    last_recording_end_ = std::chrono::steady_clock::now();
+
     state_.store(AppState::Idle);
     update_tray_state(AppState::Idle);
 }
@@ -170,8 +184,8 @@ void App::on_transcription_complete(const std::string& text) {
     if (config_.auto_paste) {
         // Set clipboard and paste
         if (Clipboard::set_text(text)) {
-            // Small delay to ensure clipboard is set
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            // Delay to ensure clipboard is fully set before pasting
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
             Clipboard::paste();
         } else {
             std::cerr << "Failed to set clipboard" << std::endl;

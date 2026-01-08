@@ -35,81 +35,101 @@ std::string TextProcessor::process(const std::string& text) const {
 std::string TextProcessor::remove_filler_words(const std::string& text) const {
     std::string result = text;
 
-    // Simple fillers with optional comma after: um, umm, uh, uhh, er, err, ah, ahh
-    // Pattern: optional comma before, filler word, optional comma after
+    // Helper regex patterns (static for performance)
     static const std::regex simple_fillers_with_comma(
         R"(,?\s*\b[Uu]+[HhMm]+\b,?\s*|,?\s*\b[Ee]+[Rr]+\b,?\s*|,?\s*\b[Aa]+[Hh]+\b,?\s*)",
         std::regex::ECMAScript
     );
-    result = std::regex_replace(result, simple_fillers_with_comma, " ");
-
-    // "you know" with optional comma before/after
     static const std::regex you_know(
         R"(,?\s*\b[Yy]ou know\b,?\s*)",
         std::regex::ECMAScript
     );
-    result = std::regex_replace(result, you_know, " ");
-
-    // "I mean" at start of text or after punctuation
     static const std::regex i_mean(
         R"((^|[.!?]\s*)[Ii] mean,?\s*)",
         std::regex::ECMAScript
     );
-    result = std::regex_replace(result, i_mean, "$1");
-
-    // "basically" at start or after punctuation
-    static const std::regex basically(
-        R"((^|[.!?]\s*)[Bb]asically,?\s*)",
-        std::regex::ECMAScript
-    );
-    result = std::regex_replace(result, basically, "$1");
-
-    // "actually" as filler at start
-    static const std::regex actually_start(
-        R"(^[Aa]ctually,?\s+)",
-        std::regex::ECMAScript
-    );
-    result = std::regex_replace(result, actually_start, "");
-
-    // ", like," as filler - remove the whole phrase including surrounding commas
     static const std::regex like_filler_commas(
         R"(,\s*like,\s*)",
         std::regex::ECMAScript | std::regex::icase
     );
-    result = std::regex_replace(result, like_filler_commas, " ");
-
-    // "like" at very start followed by comma
-    static const std::regex like_start(
-        R"(^[Ll]ike,\s*)",
-        std::regex::ECMAScript
-    );
-    result = std::regex_replace(result, like_start, "");
-
-    // "so" at very start when followed by comma (filler usage)
-    static const std::regex so_start(
-        R"(^[Ss]o,\s*)",
-        std::regex::ECMAScript
-    );
-    result = std::regex_replace(result, so_start, "");
-
-    // "right" at end as filler tag question
     static const std::regex right_end(
         R"(,\s*right\s*[.?]?\s*$)",
         std::regex::ECMAScript | std::regex::icase
     );
+    static const std::regex double_comma(R"(,\s*,)");
+    static const std::regex double_space(R"(\s{2,})");
+    static const std::regex leading_ws(R"(^\s+)");
+    static const std::regex orphan_comma_start(R"(^\s*,\s*)");
+
+    // Step 1: Remove simple fillers (um, uh, er, ah) with optional commas
+    result = std::regex_replace(result, simple_fillers_with_comma, " ");
+
+    // Step 2: Remove "you know" phrase
+    result = std::regex_replace(result, you_know, " ");
+
+    // Step 3: Remove "I mean" at start or after punctuation
+    result = std::regex_replace(result, i_mean, "$1");
+
+    // Step 4: Remove ", like," as filler
+    result = std::regex_replace(result, like_filler_commas, " ");
+
+    // Step 5: Remove "right" at end (tag question filler)
     result = std::regex_replace(result, right_end, ".");
 
-    // Clean up orphaned commas at start
-    static const std::regex orphan_comma_start(R"(^\s*,\s*)");
+    // Step 6: Clean up spacing and commas
+    result = std::regex_replace(result, double_comma, ",");
+    result = std::regex_replace(result, double_space, " ");
+    result = std::regex_replace(result, leading_ws, "");
     result = std::regex_replace(result, orphan_comma_start, "");
 
-    // Clean up double commas
-    static const std::regex double_comma(R"(,\s*,)");
-    result = std::regex_replace(result, double_comma, ",");
+    // Step 7: Remove start-of-sentence fillers (so, basically, actually, like)
+    // Run in a loop since removing one might expose another
+    bool changed = true;
+    int iterations = 0;
+    while (changed && iterations < 5) {
+        changed = false;
+        iterations++;
+        std::string prev = result;
 
-    // Clean up any double/multiple spaces created
-    static const std::regex double_space(R"(\s{2,})");
+        // "so," at start (only with comma - "so" alone might be meaningful)
+        if (result.size() >= 3 && (result[0] == 'S' || result[0] == 's') &&
+            result[1] == 'o' && result[2] == ',') {
+            size_t pos = 3;
+            while (pos < result.size() && std::isspace(static_cast<unsigned char>(result[pos]))) pos++;
+            result = result.substr(pos);
+            changed = true;
+        }
+        // "basically" at start
+        else if (result.size() >= 9 &&
+            (result.substr(0, 9) == "Basically" || result.substr(0, 9) == "basically")) {
+            size_t pos = 9;
+            if (pos < result.size() && result[pos] == ',') pos++;
+            while (pos < result.size() && std::isspace(static_cast<unsigned char>(result[pos]))) pos++;
+            result = result.substr(pos);
+            changed = true;
+        }
+        // "actually" at start
+        else if (result.size() >= 8 &&
+            (result.substr(0, 8) == "Actually" || result.substr(0, 8) == "actually")) {
+            size_t pos = 8;
+            if (pos < result.size() && result[pos] == ',') pos++;
+            while (pos < result.size() && std::isspace(static_cast<unsigned char>(result[pos]))) pos++;
+            result = result.substr(pos);
+            changed = true;
+        }
+        // "like," at start
+        else if (result.size() >= 5 &&
+            (result.substr(0, 5) == "Like," || result.substr(0, 5) == "like,")) {
+            size_t pos = 5;
+            while (pos < result.size() && std::isspace(static_cast<unsigned char>(result[pos]))) pos++;
+            result = result.substr(pos);
+            changed = true;
+        }
+    }
+
+    // Final cleanup
     result = std::regex_replace(result, double_space, " ");
+    result = std::regex_replace(result, leading_ws, "");
 
     return result;
 }

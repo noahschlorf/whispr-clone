@@ -9,6 +9,7 @@
 #include <memory>
 #include <atomic>
 #include <string>
+#include <chrono>
 
 namespace whispr {
 
@@ -52,6 +53,9 @@ private:
 
     std::atomic<AppState> state_{AppState::Idle};
     std::atomic<bool> should_quit_{false};
+
+    // Timestamp of last recording end (for cooldown)
+    std::chrono::steady_clock::time_point last_recording_end_;
 };
 
 // Platform-specific tray icon
