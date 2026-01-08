@@ -1,0 +1,25 @@
+# Build directories
+build/
+.cache/
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# Models (large files)
+models/*.bin
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled objects
+*.o
+*.obj
+*.a
+*.lib
+*.dylib
+*.so
