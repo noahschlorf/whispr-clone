@@ -115,11 +115,22 @@ TranscriptionResult Transcriber::transcribe(const std::vector<float>& audio) {
         text = text.substr(start, end - start + 1);
     }
 
+    // Store raw text before processing
+    result.raw_text = text;
+
+    // Post-process text (remove fillers, fix formatting)
+    if (process_text_ && !text.empty()) {
+        text = text_processor_.process(text);
+    }
+
     result.text = text;
     result.duration_ms = duration.count();
     result.success = true;
 
     std::cout << "Transcription took " << result.duration_ms << "ms: \"" << result.text << "\"" << std::endl;
+    if (process_text_ && result.raw_text != result.text) {
+        std::cout << "  (raw: \"" << result.raw_text << "\")" << std::endl;
+    }
 
     return result;
 }
