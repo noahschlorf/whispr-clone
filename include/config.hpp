@@ -90,8 +90,11 @@ struct Config {
     float silence_threshold = 0.01f;  // Silence detection threshold
     int min_silence_ms = 100;         // Minimum silence duration to trim
 
-    // Initial prompt for context (helps accuracy)
-    std::string initial_prompt = "The following is a clear transcription of speech.";
+    // Initial prompt for context (helps accuracy and vocabulary recognition)
+    // Add proper nouns and technical terms you commonly use
+    std::string initial_prompt = "The following is a clear transcription of speech. "
+                                  "Common terms: Ralph Wiggum, Claude, Anthropic, GitHub, "
+                                  "macOS, Python, JavaScript, TypeScript, API.";
 };
 
 // Default hotkey codes

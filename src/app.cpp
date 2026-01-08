@@ -199,6 +199,12 @@ void App::stop_recording() {
         }
     }
 
+    // Whisper requires minimum 100ms of audio - pad with silence if too short
+    int min_samples = config_.sample_rate / 10;  // 100ms
+    if (static_cast<int>(audio_data.size()) < min_samples) {
+        audio_data.resize(min_samples, 0.0f);  // Pad with silence
+    }
+
     // Transcribe (use adaptive mode if enabled)
     TranscriptionResult result;
     if (config_.adaptive_quality) {
