@@ -73,7 +73,9 @@ TranscriptionResult Transcriber::transcribe_with_profile(const std::vector<float
     wparams.print_realtime   = false;
     wparams.print_timestamps = false;
     wparams.translate        = translate_;
-    wparams.single_segment   = false;  // Allow multiple segments for better accuracy
+    // Use single segment for short audio (<10s) to prevent duplication, multi for longer
+    bool is_short = audio.size() < static_cast<size_t>(16000 * 10);  // 10 seconds at 16kHz
+    wparams.single_segment   = is_short;
     wparams.no_context       = initial_prompt_.empty();  // Use context if prompt provided
     wparams.language         = language_.c_str();
     wparams.n_threads        = n_threads_;
