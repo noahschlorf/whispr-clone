@@ -7,7 +7,7 @@
 ## Quick Install (macOS)
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/noahschlorf/whispr-clone/main/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/noahschlorf/whispr-clone/master/install.sh)"
 ```
 
 That's it! The script installs everything automatically.

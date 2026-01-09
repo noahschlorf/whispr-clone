@@ -1,6 +1,6 @@
 #!/bin/bash
 # VoxType Installer - One-click voice-to-text for macOS
-# Usage: curl -fsSL https://raw.githubusercontent.com/noahschlorf/whispr-clone/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/noahschlorf/whispr-clone/master/install.sh | bash
 
 set -e
 
