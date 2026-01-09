@@ -113,7 +113,7 @@ int App::run() {
         return 1;
     }
 
-    std::cout << "\n=== Whispr Clone Ready ===" << std::endl;
+    std::cout << "\n=== VoxType Ready ===" << std::endl;
     std::cout << "Hold the hotkey to record, release to transcribe and paste." << std::endl;
     std::cout << "Menu bar icon should appear in your menu bar.\n" << std::endl;
 
@@ -131,6 +131,11 @@ int App::run() {
 }
 
 void App::on_hotkey(bool pressed) {
+    // Skip hotkey if disabled
+    if (!enabled_.load()) {
+        return;
+    }
+
     if (pressed) {
         start_recording();
     } else {
@@ -203,6 +208,9 @@ void App::stop_recording() {
 }
 
 void App::on_transcription_complete(const std::string& text) {
+    // Add to history for menu bar display
+    add_to_history(text);
+
     if (config_.auto_paste) {
         // Set clipboard and paste
         if (Clipboard::set_text(text)) {
