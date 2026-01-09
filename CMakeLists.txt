@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(whispr-clone VERSION 1.0.0 LANGUAGES CXX C)
+project(voxtype VERSION 2.0.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -60,25 +60,25 @@ set(HEADERS
 )
 
 # Main executable
-add_executable(whispr ${SOURCES} ${HEADERS})
+add_executable(voxtype ${SOURCES} ${HEADERS})
 
-target_include_directories(whispr PRIVATE
+target_include_directories(voxtype PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/external/whisper.cpp
     ${PORTAUDIO_INCLUDE_DIRS}
 )
 
-target_link_libraries(whispr PRIVATE
+target_link_libraries(voxtype PRIVATE
     whisper
     ${PORTAUDIO_LINK_LIBRARIES}
 )
 
 # Add portaudio library directory
-target_link_directories(whispr PRIVATE ${PORTAUDIO_LIBRARY_DIRS})
+target_link_directories(voxtype PRIVATE ${PORTAUDIO_LIBRARY_DIRS})
 
 # Platform-specific libraries
 if(PLATFORM_MACOS)
-    target_sources(whispr PRIVATE
+    target_sources(voxtype PRIVATE
         src/platform/macos/hotkey_macos.mm
         src/platform/macos/clipboard_macos.mm
         src/platform/macos/tray_macos.mm
@@ -87,14 +87,14 @@ if(PLATFORM_MACOS)
     find_library(CARBON_FRAMEWORK Carbon REQUIRED)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(COREGRAPHICS_FRAMEWORK CoreGraphics REQUIRED)
-    target_link_libraries(whispr PRIVATE
+    target_link_libraries(voxtype PRIVATE
         ${COCOA_FRAMEWORK}
         ${CARBON_FRAMEWORK}
         ${APPKIT_FRAMEWORK}
         ${COREGRAPHICS_FRAMEWORK}
     )
 elseif(PLATFORM_LINUX)
-    target_sources(whispr PRIVATE
+    target_sources(voxtype PRIVATE
         src/platform/linux/hotkey_linux.cpp
         src/platform/linux/clipboard_linux.cpp
         src/platform/linux/tray_linux.cpp
@@ -102,14 +102,14 @@ elseif(PLATFORM_LINUX)
     pkg_check_modules(X11 REQUIRED x11)
     pkg_check_modules(XTST REQUIRED xtst)
     pkg_check_modules(LIBEVDEV libevdev)
-    target_include_directories(whispr PRIVATE ${X11_INCLUDE_DIRS} ${XTST_INCLUDE_DIRS})
-    target_link_libraries(whispr PRIVATE ${X11_LIBRARIES} ${XTST_LIBRARIES})
+    target_include_directories(voxtype PRIVATE ${X11_INCLUDE_DIRS} ${XTST_INCLUDE_DIRS})
+    target_link_libraries(voxtype PRIVATE ${X11_LIBRARIES} ${XTST_LIBRARIES})
     if(LIBEVDEV_FOUND)
-        target_include_directories(whispr PRIVATE ${LIBEVDEV_INCLUDE_DIRS})
-        target_link_libraries(whispr PRIVATE ${LIBEVDEV_LIBRARIES})
+        target_include_directories(voxtype PRIVATE ${LIBEVDEV_INCLUDE_DIRS})
+        target_link_libraries(voxtype PRIVATE ${LIBEVDEV_LIBRARIES})
         add_definitions(-DHAS_LIBEVDEV)
     endif()
 endif()
 
 # Install
-install(TARGETS whispr RUNTIME DESTINATION bin)
+install(TARGETS voxtype RUNTIME DESTINATION bin)

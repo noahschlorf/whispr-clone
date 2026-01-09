@@ -1,117 +1,118 @@
-# Whispr Clone
+# VoxType
 
-A low-latency voice-to-text application that transcribes speech and auto-pastes to your cursor location. Hold a hotkey to record, release to transcribe and paste.
+**Voice-to-text that just works.** Hold a key, speak, release - your words appear wherever your cursor is.
 
-## Features
+100% local, 100% private. No internet required.
 
-- **Low Latency**: Uses local Whisper.cpp for fast transcription (~100-300ms)
-- **Hold-to-Talk**: Hold Right Option/Alt to record, release to transcribe
-- **Auto-Paste**: Text is automatically pasted where your cursor is
-- **Menu Bar App**: Minimal UI with status indicator
-- **Cross-Platform**: macOS and Linux support
-- **GPU Acceleration**: Metal on macOS for faster inference
-
-## Requirements
-
-### macOS
-- macOS 11+ (Big Sur or later)
-- Homebrew
-- Xcode Command Line Tools
-
-### Linux
-- libevdev (for keyboard input)
-- X11 + XTest (for clipboard/paste)
-- xclip or xsel
-
-## Quick Start
+## Quick Install (macOS)
 
 ```bash
-# Clone the repo
-git clone --recursive https://github.com/your-repo/whispr-clone.git
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/noahschlorf/whispr-clone/main/install.sh)"
+```
+
+That's it! The script installs everything automatically.
+
+## Manual Install
+
+```bash
+# 1. Install dependencies
+brew install portaudio cmake
+
+# 2. Clone
+git clone --recursive https://github.com/noahschlorf/whispr-clone.git
 cd whispr-clone
 
-# Build (macOS)
-brew install portaudio cmake
-./build.sh
+# 3. Build
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(sysctl -n hw.ncpu)
+cd ..
 
-# Download a Whisper model
+# 4. Download AI model (142MB)
 mkdir -p models
 curl -L -o models/ggml-base.en.bin \
   https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
 
-# Run
-./build/whispr
+# 5. Run
+./build/voxtype
 ```
+
+## Grant Permissions (Required)
+
+VoxType needs Accessibility permissions to detect your hotkey:
+
+1. **System Settings** > **Privacy & Security** > **Accessibility**
+2. Click **+** and add `voxtype` (in the build folder)
+3. Toggle **ON**
 
 ## Usage
 
-```
-./build/whispr [options]
+| Action | What happens |
+|--------|-------------|
+| **Hold Right Option** | Start recording |
+| **Release** | Transcribe & paste |
+| **Click menu bar icon** | See options & history |
 
-Options:
-  -m, --model PATH    Path to whisper model (default: models/ggml-base.en.bin)
-  -t, --threads N     Number of CPU threads (default: 4)
-  -l, --language LANG Language code (default: en)
-  -k, --keycode N     Hotkey keycode (platform-specific)
-  --no-paste          Don't auto-paste, just copy to clipboard
-  -h, --help          Show help
-```
+### Menu Bar Features
+- **Enable/Disable** - Toggle voice input on/off
+- **Recent Transcriptions** - Click to copy previous text
+- **Quality** - Switch between Fast/Balanced/Accurate/Best
 
-## Hotkey
-
-- **macOS**: Right Option key (keycode 61)
-- **Linux**: Right Alt key (keycode 108)
-
-You can customize the hotkey with `-k <keycode>`.
-
-## Permissions
-
-### macOS
-The app needs Accessibility permissions to capture keyboard events:
-1. Go to System Preferences > Security & Privacy > Privacy > Accessibility
-2. Add the `whispr` binary to the list
-
-### Linux
-Either run with sudo or add your user to the `input` group:
-```bash
-sudo usermod -a -G input $USER
-# Log out and back in
-```
-
-## Models
-
-Download Whisper models from HuggingFace:
-
-| Model | Size | Speed | Quality |
-|-------|------|-------|---------|
-| tiny.en | 75 MB | Fastest | Good |
-| base.en | 141 MB | Fast | Better |
-| small.en | 466 MB | Medium | Great |
-| medium.en | 1.5 GB | Slow | Excellent |
+## Options
 
 ```bash
-# Download different models
+./build/voxtype [options]
+
+  -q, --quality MODE   fast, balanced, accurate, best (default: balanced)
+  -t, --threads N      CPU threads (default: 4)
+  --no-paste           Copy only, don't auto-paste
+  -h, --help           Show all options
+```
+
+## Quality Modes
+
+| Mode | Model | Size | Speed | Accuracy |
+|------|-------|------|-------|----------|
+| fast | tiny.en | 75MB | ~50ms | ~80% |
+| **balanced** | base.en | 142MB | ~100ms | ~85% |
+| accurate | small.en | 466MB | ~200ms | ~92% |
+| best | medium.en | 1.5GB | ~500ms | ~95% |
+
+Download other models:
+```bash
+# Faster but less accurate
 curl -L -o models/ggml-tiny.en.bin \
   https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin
 
+# More accurate but slower
 curl -L -o models/ggml-small.en.bin \
   https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 ```
 
-## Building from Source
+## How It Works
 
-```bash
-# Install dependencies (macOS)
-brew install portaudio cmake
+1. **PortAudio** captures microphone input
+2. **whisper.cpp** runs OpenAI's Whisper model locally
+3. **Metal GPU** accelerates inference on Apple Silicon
+4. Text is copied to clipboard and pasted
 
-# Install dependencies (Ubuntu/Debian)
-sudo apt install portaudio19-dev cmake libevdev-dev libx11-dev libxtst-dev
+All processing happens on your Mac. Nothing is sent to the cloud.
 
-# Build
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . -j$(nproc)
-```
+## Troubleshooting
+
+**"Recording..." but nothing happens on release**
+- Grant Accessibility permissions (see above)
+
+**No menu bar icon**
+- Make sure only one instance is running: `pkill voxtype`
+
+**Model not found**
+- Run from the project directory (where `models/` folder is)
+
+## Requirements
+
+- macOS 11+ (Big Sur or later)
+- Apple Silicon (M1/M2/M3) or Intel Mac
 
 ## License
 

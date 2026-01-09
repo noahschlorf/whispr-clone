@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
     whispr::App app;
     g_app = &app;
 
-    std::cout << "Whispr Clone - Voice to Text\n" << std::endl;
+    std::cout << "VoxType - Voice to Text\n" << std::endl;
     std::cout << "Quality: " << whispr::get_profile(config.model_quality).name << std::endl;
     std::cout << "Model: " << config.get_model_path() << std::endl;
     std::cout << "Threads: " << config.n_threads << std::endl;
