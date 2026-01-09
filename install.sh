@@ -49,12 +49,21 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . -j$(sysctl -n hw.ncpu)
 cd ..
 
-# Download model
-echo -e "${GREEN}Downloading Whisper model (142MB)...${NC}"
+# Download models
 mkdir -p models
+
+# Download base model (required)
+echo -e "${GREEN}Downloading Whisper base model (142MB)...${NC}"
 if [[ ! -f "models/ggml-base.en.bin" ]]; then
     curl -L --progress-bar -o models/ggml-base.en.bin \
         https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
+fi
+
+# Download accurate model (recommended for better accuracy)
+echo -e "${GREEN}Downloading Whisper accurate model (466MB)...${NC}"
+if [[ ! -f "models/ggml-small.en.bin" ]]; then
+    curl -L --progress-bar -o models/ggml-small.en.bin \
+        https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 fi
 
 # Create launch script
@@ -62,7 +71,7 @@ echo -e "${GREEN}Creating launch script...${NC}"
 cat > ~/VoxType/voxtype.command << 'LAUNCH'
 #!/bin/bash
 cd "$(dirname "$0")"
-./build/voxtype
+./build/voxtype -q accurate
 LAUNCH
 chmod +x ~/VoxType/voxtype.command
 
@@ -71,10 +80,13 @@ echo "=========================================="
 echo -e "${GREEN}  VoxType installed successfully!${NC}"
 echo "=========================================="
 echo ""
-echo "To run VoxType:"
-echo "  cd ~/VoxType && ./build/voxtype"
+echo "To run VoxType (accurate mode - recommended):"
+echo "  cd ~/VoxType && ./build/voxtype -q accurate"
 echo ""
 echo "Or double-click: ~/VoxType/voxtype.command"
+echo ""
+echo "For faster transcription (less accurate):"
+echo "  cd ~/VoxType && ./build/voxtype -q balanced"
 echo ""
 echo -e "${YELLOW}IMPORTANT: Grant Accessibility permissions:${NC}"
 echo "  1. Open System Settings > Privacy & Security > Accessibility"

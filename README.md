@@ -10,7 +10,11 @@
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/noahschlorf/whispr-clone/master/install.sh)"
 ```
 
-That's it! The script installs everything automatically.
+That's it! The script:
+- Installs Homebrew (if needed), PortAudio, and CMake
+- Builds VoxType from source
+- Downloads AI models (base + accurate)
+- Creates a double-clickable launcher at `~/VoxType/voxtype.command`
 
 ## Manual Install
 
@@ -28,13 +32,15 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(sysctl -n hw.ncpu)
 cd ..
 
-# 4. Download AI model (142MB)
+# 4. Download AI models
 mkdir -p models
 curl -L -o models/ggml-base.en.bin \
   https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
+curl -L -o models/ggml-small.en.bin \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 
-# 5. Run
-./build/voxtype
+# 5. Run (accurate mode recommended)
+./build/voxtype -q accurate
 ```
 
 ## Grant Permissions (Required)
@@ -63,7 +69,7 @@ VoxType needs Accessibility permissions to detect your hotkey:
 ```bash
 ./build/voxtype [options]
 
-  -q, --quality MODE   fast, balanced, accurate, best (default: balanced)
+  -q, --quality MODE   fast, balanced, accurate, best (recommended: accurate)
   -t, --threads N      CPU threads (default: 4)
   --no-paste           Copy only, don't auto-paste
   -h, --help           Show all options
@@ -74,9 +80,11 @@ VoxType needs Accessibility permissions to detect your hotkey:
 | Mode | Model | Size | Speed | Accuracy |
 |------|-------|------|-------|----------|
 | fast | tiny.en | 75MB | ~50ms | ~80% |
-| **balanced** | base.en | 142MB | ~100ms | ~85% |
-| accurate | small.en | 466MB | ~200ms | ~92% |
+| balanced | base.en | 142MB | ~100ms | ~85% |
+| **accurate** | small.en | 466MB | ~200ms | **~92%** |
 | best | medium.en | 1.5GB | ~500ms | ~95% |
+
+**Recommended:** Use `accurate` mode for best balance of speed and accuracy on Apple Silicon.
 
 Download other models:
 ```bash
