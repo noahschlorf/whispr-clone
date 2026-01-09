@@ -37,8 +37,10 @@ if [[ ! -f "CMakeLists.txt" ]]; then
     echo -e "${GREEN}Downloading VoxType...${NC}"
     git clone --recursive https://github.com/noahschlorf/whispr-clone.git ~/VoxType
     cd ~/VoxType
+    INSTALL_DIR=~/VoxType
 else
     echo -e "${GREEN}Building in current directory...${NC}"
+    INSTALL_DIR="$(pwd)"
 fi
 
 # Build
@@ -73,12 +75,12 @@ fi
 
 # Create launch script
 echo -e "${GREEN}Creating launch script...${NC}"
-cat > ~/VoxType/voxtype.command << 'LAUNCH'
+cat > "${INSTALL_DIR}/voxtype.command" << 'LAUNCH'
 #!/bin/bash
 cd "$(dirname "$0")"
 ./build/voxtype -q accurate
 LAUNCH
-chmod +x ~/VoxType/voxtype.command
+chmod +x "${INSTALL_DIR}/voxtype.command"
 
 echo ""
 echo "=========================================="
@@ -86,16 +88,16 @@ echo -e "${GREEN}  VoxType installed successfully!${NC}"
 echo "=========================================="
 echo ""
 echo "To run VoxType (accurate mode - recommended):"
-echo "  cd ~/VoxType && ./build/voxtype -q accurate"
+echo "  cd ${INSTALL_DIR} && ./build/voxtype -q accurate"
 echo ""
-echo "Or double-click: ~/VoxType/voxtype.command"
+echo "Or double-click: ${INSTALL_DIR}/voxtype.command"
 echo ""
 echo "For faster transcription (less accurate):"
-echo "  cd ~/VoxType && ./build/voxtype -q balanced"
+echo "  cd ${INSTALL_DIR} && ./build/voxtype -q balanced"
 echo ""
 echo -e "${YELLOW}IMPORTANT: Grant Accessibility permissions:${NC}"
 echo "  1. Open System Settings > Privacy & Security > Accessibility"
-echo "  2. Click '+' and add: ~/VoxType/build/voxtype"
+echo "  2. Click '+' and add: ${INSTALL_DIR}/build/voxtype"
 echo "  3. Toggle ON"
 echo ""
 echo "Usage:"
