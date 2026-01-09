@@ -106,6 +106,7 @@ static whispr::ModelQuality g_current_quality = whispr::ModelQuality::Balanced;
     // Create status bar item on main thread after app launches
     dispatch_async(dispatch_get_main_queue(), ^{
         g_status_item = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
+        [g_status_item retain];  // Prevent ARC from releasing
 
         if (g_status_item) {
             // Use SF Symbol icon, fallback to emoji if unavailable
@@ -269,17 +270,26 @@ static whispr::ModelQuality g_current_quality = whispr::ModelQuality::Balanced;
 - (void)updateHistoryMenu {
     if (!g_status_ready || !g_status_item) return;
 
+    // Capture a copy of history for thread safety
+    std::vector<std::string> history_copy = g_history;
+
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSMenu *menu = g_status_item.menu;
-        if (!menu) return;
+        // Re-validate on main thread
+        if (!g_status_ready || !g_status_item) return;
+
+        NSStatusItem* statusItem = g_status_item;
+        if (!statusItem || ![statusItem isKindOfClass:[NSStatusItem class]]) return;
+
+        NSMenu *menu = statusItem.menu;
+        if (!menu || ![menu isKindOfClass:[NSMenu class]]) return;
 
         // Update history items
         for (size_t i = 0; i < MAX_HISTORY; i++) {
             NSMenuItem *item = [menu itemWithTag:401 + i];
             if (!item) continue;
 
-            if (i < g_history.size()) {
-                std::string text = g_history[i];
+            if (i < history_copy.size()) {
+                std::string text = history_copy[i];
                 // Truncate long text
                 if (text.length() > 40) {
                     text = text.substr(0, 37) + "...";
@@ -294,7 +304,7 @@ static whispr::ModelQuality g_current_quality = whispr::ModelQuality::Balanced;
         // Show/hide "no history" placeholder
         NSMenuItem *noHistoryItem = [menu itemWithTag:410];
         if (noHistoryItem) {
-            noHistoryItem.hidden = !g_history.empty();
+            noHistoryItem.hidden = !history_copy.empty();
         }
     });
 }
@@ -400,26 +410,17 @@ void add_to_history(const std::string& text) {
 }
 
 void update_tray_state(AppState state) {
-    if (!g_status_ready) return;
+    if (!g_status_ready || !g_status_item) return;
 
     // Capture state for the block
     AppState captured_state = state;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        // Re-check on main thread and get a strong local reference
-        if (!g_status_ready) return;
+        // Re-check on main thread
+        if (!g_status_ready || !g_status_item) return;
 
-        NSStatusItem* statusItem = g_status_item;
-        if (!statusItem || ![statusItem isKindOfClass:[NSStatusItem class]]) {
-            NSLog(@"Warning: Invalid status item in update_tray_state");
-            return;
-        }
-
-        NSStatusBarButton* button = statusItem.button;
-        if (!button) {
-            NSLog(@"Warning: No button on status item");
-            return;
-        }
+        NSStatusBarButton* button = g_status_item.button;
+        if (!button) return;
 
         // If disabled, always show disabled icon
         if (!g_enabled) {
@@ -463,7 +464,7 @@ void update_tray_state(AppState state) {
             button.title = fallbackEmoji;
         }
 
-        NSMenuItem *menuStatusItem = [statusItem.menu itemWithTag:100];
+        NSMenuItem *menuStatusItem = [g_status_item.menu itemWithTag:100];
         if (menuStatusItem) {
             menuStatusItem.title = statusText;
         }
