@@ -23,3 +23,6 @@ models/*.bin
 *.lib
 *.dylib
 *.so
+
+# Metal shader (copied from whisper.cpp during build)
+ggml-metal.metal

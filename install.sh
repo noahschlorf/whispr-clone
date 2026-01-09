@@ -49,6 +49,11 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . -j$(sysctl -n hw.ncpu)
 cd ..
 
+# Copy Metal shader (required for GPU acceleration)
+if [[ -f "external/whisper.cpp/ggml-metal.metal" ]]; then
+    cp external/whisper.cpp/ggml-metal.metal .
+fi
+
 # Download models
 mkdir -p models
 

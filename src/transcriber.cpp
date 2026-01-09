@@ -80,7 +80,6 @@ TranscriptionResult Transcriber::transcribe_with_profile(const std::vector<float
     wparams.language         = language_.c_str();
     wparams.n_threads        = n_threads_;
     wparams.suppress_blank   = true;   // Suppress blank outputs
-    wparams.suppress_nst     = true;   // Suppress non-speech tokens
 
     // Apply profile settings
     wparams.greedy.best_of        = profile.best_of;
