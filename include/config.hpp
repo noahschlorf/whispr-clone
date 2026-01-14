@@ -80,8 +80,13 @@ struct Config {
 
     // Behavior
     bool auto_paste = true;
-    bool play_sound = false;
     int max_recording_seconds = 30;
+
+    // Sound feedback options
+    bool sound_on_record_start = false;   // Play sound when recording starts
+    bool sound_on_record_stop = false;    // Play sound when recording stops
+    bool sound_on_transcription = false;  // Play sound when transcription completes
+    bool sound_on_error = false;          // Play sound on error
 
     // Performance & Accuracy
     bool use_gpu = true;            // Metal/CUDA acceleration

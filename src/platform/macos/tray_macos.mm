@@ -15,6 +15,10 @@ static std::vector<std::string> g_history;
 static std::mutex g_history_mutex;
 static const size_t MAX_HISTORY = 5;
 
+// Last transcription confidence
+static float g_last_confidence = 0.0f;
+static std::mutex g_confidence_mutex;
+
 // Cache SF Symbol images for performance
 static NSImage* g_icon_idle = nil;
 static NSImage* g_icon_recording = nil;
@@ -132,6 +136,12 @@ static whispr::ModelQuality g_current_quality = whispr::ModelQuality::Balanced;
             statusItem.enabled = NO;
             statusItem.tag = 100;
             [menu addItem:statusItem];
+
+            // Last confidence score
+            NSMenuItem *confidenceItem = [[NSMenuItem alloc] initWithTitle:@"Last confidence: --" action:nil keyEquivalent:@""];
+            confidenceItem.enabled = NO;
+            confidenceItem.tag = 101;
+            [menu addItem:confidenceItem];
 
             [menu addItem:[NSMenuItem separatorItem]];
 
@@ -499,6 +509,29 @@ void update_tray_state(AppState state) {
         NSMenuItem *menuStatusItem = [g_status_item.menu itemWithTag:100];
         if (menuStatusItem) {
             menuStatusItem.title = statusText;
+        }
+    });
+}
+
+void update_last_confidence(float confidence) {
+    {
+        std::lock_guard<std::mutex> lock(g_confidence_mutex);
+        g_last_confidence = confidence;
+    }
+
+    if (!g_status_ready || !g_status_item) return;
+
+    // Capture for block
+    float captured_confidence = confidence;
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!g_status_ready || !g_status_item) return;
+
+        NSMenuItem *confidenceItem = [g_status_item.menu itemWithTag:101];
+        if (confidenceItem) {
+            int pct = static_cast<int>(captured_confidence * 100);
+            NSString *confText = [NSString stringWithFormat:@"Last confidence: %d%%", pct];
+            confidenceItem.title = confText;
         }
     });
 }

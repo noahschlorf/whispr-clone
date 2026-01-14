@@ -255,9 +255,12 @@ void App::stop_recording() {
     }
 
     if (result.success && !result.text.empty()) {
+        // Update confidence display in menu bar
+        update_last_confidence(result.confidence);
         on_transcription_complete(result.text);
     } else if (!result.success) {
         std::cerr << "Transcription failed: " << result.error << std::endl;
+        update_last_confidence(0.0f);  // Show 0% on failure
     }
 
     // Record timestamp for cooldown check

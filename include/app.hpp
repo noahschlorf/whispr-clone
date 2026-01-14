@@ -70,5 +70,6 @@ bool create_tray_icon(App* app);
 void destroy_tray_icon();
 void update_tray_state(AppState state);
 void add_to_history(const std::string& text);
+void update_last_confidence(float confidence);  // Show confidence in menu
 
 } // namespace whispr
