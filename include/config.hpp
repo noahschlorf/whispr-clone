@@ -5,6 +5,29 @@
 
 namespace whispr {
 
+// ============================================================================
+// Named Constants (replace magic numbers)
+// ============================================================================
+
+/// Audio settings
+constexpr int WHISPER_SAMPLE_RATE = 16000;    ///< Whisper requires 16kHz audio
+constexpr int AUDIO_CHANNELS_MONO = 1;         ///< Mono audio channel count
+constexpr int DEFAULT_BUFFER_FRAMES = 512;     ///< Low-latency audio buffer size
+constexpr int DEFAULT_THREAD_COUNT = 4;        ///< Default CPU threads for inference
+
+/// Recording limits
+constexpr int DEFAULT_MAX_RECORDING_SEC = 30;  ///< Maximum recording duration
+constexpr int MIN_AUDIO_DURATION_MS = 100;     ///< Minimum audio for transcription
+
+/// VAD (Voice Activity Detection) settings
+constexpr float DEFAULT_SILENCE_THRESHOLD = 0.01f;  ///< Silence detection threshold
+constexpr int DEFAULT_MIN_SILENCE_MS = 100;         ///< Minimum silence to trim
+constexpr int DEFAULT_VAD_PADDING_MS = 50;          ///< Padding around speech
+
+/// Confidence thresholds
+constexpr float DEFAULT_CONFIDENCE_THRESHOLD = 0.7f;  ///< Min confidence for adaptive mode
+
+// ============================================================================
 // Quality modes for accuracy/speed tradeoff
 enum class ModelQuality {
     Fast,       // tiny.en - fastest, ~80% accuracy
@@ -58,52 +81,53 @@ inline std::string get_model_filename(ModelQuality quality) {
     }
 }
 
+/// @struct Config
+/// @brief Application configuration settings
 struct Config {
-    // Audio settings
-    int sample_rate = 16000;        // Whisper expects 16kHz
-    int channels = 1;               // Mono
-    int frames_per_buffer = 512;    // Low latency buffer
+    // Audio settings (using named constants)
+    int sample_rate = WHISPER_SAMPLE_RATE;       ///< Audio sample rate (Hz)
+    int channels = AUDIO_CHANNELS_MONO;          ///< Number of audio channels
+    int frames_per_buffer = DEFAULT_BUFFER_FRAMES;  ///< Audio buffer size
 
     // Whisper model
     std::string model_dir = "models";
-    ModelQuality model_quality = ModelQuality::Balanced;  // base.en model
-    int n_threads = 4;              // CPU threads for inference
+    ModelQuality model_quality = ModelQuality::Balanced;
+    int n_threads = DEFAULT_THREAD_COUNT;        ///< CPU threads for inference
 
-    // Get full model path based on quality
+    /// @brief Get full path to whisper model file
     std::string get_model_path() const {
         return model_dir + "/" + get_model_filename(model_quality);
     }
 
     // Hotkey (default: Right Option/Alt key)
-    uint32_t hotkey_keycode = 0;    // Platform-specific
-    uint32_t hotkey_modifiers = 0;
+    uint32_t hotkey_keycode = 0;    ///< Platform-specific keycode
+    uint32_t hotkey_modifiers = 0;  ///< Modifier keys (shift, ctrl, etc.)
 
     // Behavior
-    bool auto_paste = true;
-    int max_recording_seconds = 30;
+    bool auto_paste = true;         ///< Automatically paste after transcription
+    int max_recording_seconds = DEFAULT_MAX_RECORDING_SEC;
 
     // Sound feedback options
-    bool sound_on_record_start = false;   // Play sound when recording starts
-    bool sound_on_record_stop = false;    // Play sound when recording stops
-    bool sound_on_transcription = false;  // Play sound when transcription completes
-    bool sound_on_error = false;          // Play sound on error
+    bool sound_on_record_start = false;   ///< Play sound when recording starts
+    bool sound_on_record_stop = false;    ///< Play sound when recording stops
+    bool sound_on_transcription = false;  ///< Play sound when transcription completes
+    bool sound_on_error = false;          ///< Play sound on error
 
     // Performance & Accuracy
-    bool use_gpu = true;            // Metal/CUDA acceleration
-    bool adaptive_quality = true;   // Auto-retry with higher quality if low confidence
-    bool translate = false;         // Just transcribe, don't translate
-    std::string language = "en";    // English
+    bool use_gpu = true;            ///< Metal/CUDA acceleration
+    bool adaptive_quality = true;   ///< Auto-retry with higher quality if low confidence
+    bool translate = false;         ///< Translate to English (vs. transcribe)
+    std::string language = "en";    ///< Source language code
 
     // Audio preprocessing
-    bool audio_preprocessing = true;  // Enable noise reduction
-    bool trim_silence = true;         // Trim silence from start/end (VAD)
-    bool enhanced_vad = true;         // Use enhanced multi-segment speech extraction
-    float silence_threshold = 0.01f;  // Silence detection threshold
-    int min_silence_ms = 100;         // Minimum silence duration to trim
-    int vad_padding_ms = 50;          // Padding around speech segments
+    bool audio_preprocessing = true;  ///< Enable noise reduction pipeline
+    bool trim_silence = true;         ///< Trim silence from start/end (VAD)
+    bool enhanced_vad = true;         ///< Use enhanced multi-segment speech extraction
+    float silence_threshold = DEFAULT_SILENCE_THRESHOLD;
+    int min_silence_ms = DEFAULT_MIN_SILENCE_MS;
+    int vad_padding_ms = DEFAULT_VAD_PADDING_MS;
 
     // Initial prompt for context (helps accuracy and vocabulary recognition)
-    // Add proper nouns and technical terms you commonly use
     std::string initial_prompt = "The following is a clear transcription of speech. "
                                   "Common terms: Ralph Wiggum, Claude, Anthropic, GitHub, "
                                   "macOS, Python, JavaScript, TypeScript, API.";
