@@ -41,12 +41,6 @@ jobs:
           curl -L -o models/ggml-base.en.bin \
             https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
 
-      - name: Create app icon
-        run: |
-          chmod +x scripts/create-app-icon.sh
-          pip3 install pillow
-          ICONSET_DIR=macos/AppIcon.iconset ./scripts/create-app-icon.sh || echo "Icon creation failed, continuing..."
-
       - name: Create app bundle
         run: |
           chmod +x scripts/create-app-bundle.sh
