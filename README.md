@@ -117,10 +117,51 @@ All processing happens on your Mac. Nothing is sent to the cloud.
 **Model not found**
 - Run from the project directory (where `models/` folder is)
 
+## Linux Installation
+
+VoxType also works on Linux with X11 (Wayland support coming soon).
+
+```bash
+# 1. Install dependencies
+# Ubuntu/Debian:
+sudo apt-get install build-essential cmake portaudio19-dev libx11-dev
+
+# Fedora:
+sudo dnf install gcc-c++ cmake portaudio-devel libX11-devel
+
+# 2. Clone and build
+git clone --recursive https://github.com/noahschlorf/whispr-clone.git
+cd whispr-clone
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+cd ..
+
+# 3. Download models
+mkdir -p models
+curl -L -o models/ggml-base.en.bin \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
+
+# 4. Run
+./build/voxtype
+```
+
+### Linux Notes
+
+- **Hotkey:** Default is Right Alt (keycode 108). Change with `-k <keycode>`
+- **Permissions:** May need to add user to `audio` group: `sudo usermod -aG audio $USER`
+- **Clipboard:** Uses xclip internally - install with `apt install xclip`
+
 ## Requirements
 
+**macOS:**
 - macOS 11+ (Big Sur or later)
 - Apple Silicon (M1/M2/M3) or Intel Mac
+
+**Linux:**
+- X11 (Wayland support planned)
+- PulseAudio or ALSA
+- GCC 9+ or Clang 10+
 
 ## License
 
