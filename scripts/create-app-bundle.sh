@@ -58,7 +58,8 @@ fi
 cat > "$APP_BUNDLE/Contents/MacOS/VoxType" << 'EOF'
 #!/bin/bash
 DIR="$(cd "$(dirname "$0")" && pwd)"
-RESOURCES="$DIR/../Resources"
+# Resolve to absolute path without .. to pass security checks
+RESOURCES="$(cd "$DIR/../Resources" && pwd)"
 
 # Change to Resources directory so Metal shader can be found
 cd "$RESOURCES"
