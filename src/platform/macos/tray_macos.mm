@@ -3,14 +3,16 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <mutex>
 
 static whispr::App* g_app = nil;
 static NSStatusItem* g_status_item = nil;
 static BOOL g_status_ready = NO;
 static BOOL g_enabled = YES;
 
-// Transcription history
+// Transcription history (protected by mutex for thread safety)
 static std::vector<std::string> g_history;
+static std::mutex g_history_mutex;
 static const size_t MAX_HISTORY = 5;
 
 // Cache SF Symbol images for performance
@@ -259,8 +261,16 @@ static whispr::ModelQuality g_current_quality = whispr::ModelQuality::Balanced;
     NSMenuItem *item = (NSMenuItem *)sender;
     NSInteger index = item.tag - 401;
 
-    if (index >= 0 && index < (NSInteger)g_history.size()) {
-        NSString *text = [NSString stringWithUTF8String:g_history[index].c_str()];
+    std::string textToCopy;
+    {
+        std::lock_guard<std::mutex> lock(g_history_mutex);
+        if (index >= 0 && index < (NSInteger)g_history.size()) {
+            textToCopy = g_history[index];
+        }
+    }
+
+    if (!textToCopy.empty()) {
+        NSString *text = [NSString stringWithUTF8String:textToCopy.c_str()];
         [[NSPasteboard generalPasteboard] clearContents];
         [[NSPasteboard generalPasteboard] setString:text forType:NSPasteboardTypeString];
         NSLog(@"Copied to clipboard: %@", text);
@@ -270,8 +280,12 @@ static whispr::ModelQuality g_current_quality = whispr::ModelQuality::Balanced;
 - (void)updateHistoryMenu {
     if (!g_status_ready || !g_status_item) return;
 
-    // Capture a copy of history for thread safety
-    std::vector<std::string> history_copy = g_history;
+    // Capture a copy of history with mutex protection
+    std::vector<std::string> history_copy;
+    {
+        std::lock_guard<std::mutex> lock(g_history_mutex);
+        history_copy = g_history;
+    }
 
     dispatch_async(dispatch_get_main_queue(), ^{
         // Re-validate on main thread
@@ -387,23 +401,41 @@ bool create_tray_icon(App* app) {
 void destroy_tray_icon() {
     if (g_status_item) {
         [[NSStatusBar systemStatusBar] removeStatusItem:g_status_item];
+        [g_status_item release];
         g_status_item = nil;
     }
+
+    // Release cached icons to prevent memory leak
+    if (g_icon_idle) { [g_icon_idle release]; g_icon_idle = nil; }
+    if (g_icon_recording) { [g_icon_recording release]; g_icon_recording = nil; }
+    if (g_icon_transcribing) { [g_icon_transcribing release]; g_icon_transcribing = nil; }
+    if (g_icon_error) { [g_icon_error release]; g_icon_error = nil; }
+    if (g_icon_disabled) { [g_icon_disabled release]; g_icon_disabled = nil; }
+
+    // Clear history with mutex protection
+    {
+        std::lock_guard<std::mutex> lock(g_history_mutex);
+        g_history.clear();
+    }
+
     g_app = nil;
 }
 
 void add_to_history(const std::string& text) {
     if (text.empty()) return;
 
-    // Add to front
-    g_history.insert(g_history.begin(), text);
+    {
+        std::lock_guard<std::mutex> lock(g_history_mutex);
+        // Add to front
+        g_history.insert(g_history.begin(), text);
 
-    // Keep max size
-    if (g_history.size() > MAX_HISTORY) {
-        g_history.pop_back();
+        // Keep max size
+        if (g_history.size() > MAX_HISTORY) {
+            g_history.pop_back();
+        }
     }
 
-    // Update menu
+    // Update menu (must be outside lock since it may dispatch to main thread)
     if (g_delegate) {
         [g_delegate updateHistoryMenu];
     }

@@ -3,6 +3,8 @@
 #import <CoreGraphics/CoreGraphics.h>
 #include "hotkey_manager.hpp"
 #include <iostream>
+#include <memory>
+#include <mutex>
 
 namespace whispr {
 
@@ -19,14 +21,16 @@ struct MacOSHotkeyState {
     bool key_pressed = false;
 };
 
-static MacOSHotkeyState* g_state = nullptr;
+static std::unique_ptr<MacOSHotkeyState> g_state;
+static std::mutex g_state_mutex;
 
 bool HotkeyManager::initialize() {
+    std::lock_guard<std::mutex> lock(g_state_mutex);
     if (platform_handle_) return true;
 
-    g_state = new MacOSHotkeyState();
+    g_state = std::make_unique<MacOSHotkeyState>();
     g_state->manager = this;
-    platform_handle_ = g_state;
+    platform_handle_ = g_state.get();
 
     return true;
 }
@@ -34,15 +38,15 @@ bool HotkeyManager::initialize() {
 void HotkeyManager::shutdown() {
     stop();
 
-    if (g_state) {
-        delete g_state;
-        g_state = nullptr;
-    }
+    std::lock_guard<std::mutex> lock(g_state_mutex);
+    g_state.reset();
     platform_handle_ = nullptr;
 }
 
 bool HotkeyManager::start() {
     if (running_.load()) return true;
+
+    std::lock_guard<std::mutex> lock(g_state_mutex);
     if (!g_state) return false;
 
     g_state->target_keycode = keycode_;
@@ -58,7 +62,7 @@ bool HotkeyManager::start() {
         kCGEventTapOptionDefault,
         event_mask,
         event_callback,
-        g_state
+        g_state.get()
     );
 
     if (!g_state->event_tap) {
@@ -90,23 +94,26 @@ void HotkeyManager::stop() {
 
     running_.store(false);
 
-    if (g_state) {
-        if (g_state->event_tap) {
-            CGEventTapEnable(g_state->event_tap, false);
-        }
+    {
+        std::lock_guard<std::mutex> lock(g_state_mutex);
+        if (g_state) {
+            if (g_state->event_tap) {
+                CGEventTapEnable(g_state->event_tap, false);
+            }
 
-        if (g_state->run_loop) {
-            CFRunLoopStop(g_state->run_loop);
-        }
+            if (g_state->run_loop) {
+                CFRunLoopStop(g_state->run_loop);
+            }
 
-        if (g_state->run_loop_source) {
-            CFRelease(g_state->run_loop_source);
-            g_state->run_loop_source = nullptr;
-        }
+            if (g_state->run_loop_source) {
+                CFRelease(g_state->run_loop_source);
+                g_state->run_loop_source = nullptr;
+            }
 
-        if (g_state->event_tap) {
-            CFRelease(g_state->event_tap);
-            g_state->event_tap = nullptr;
+            if (g_state->event_tap) {
+                CFRelease(g_state->event_tap);
+                g_state->event_tap = nullptr;
+            }
         }
     }
 
