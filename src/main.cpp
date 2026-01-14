@@ -3,6 +3,7 @@
 #include <iostream>
 #include <csignal>
 #include <cstring>
+#include <stdexcept>
 
 static whispr::App* g_app = nullptr;
 
@@ -68,13 +69,31 @@ int main(int argc, char* argv[]) {
             config.model_dir = argv[++i];
         }
         else if ((strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--threads") == 0) && i + 1 < argc) {
-            config.n_threads = std::atoi(argv[++i]);
+            try {
+                config.n_threads = std::stoi(argv[++i]);
+                if (config.n_threads <= 0) {
+                    std::cerr << "Warning: Invalid thread count, using default (4)" << std::endl;
+                    config.n_threads = 4;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "Warning: Invalid thread count '" << argv[i] << "', using default (4)" << std::endl;
+                config.n_threads = 4;
+            }
         }
         else if ((strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--language") == 0) && i + 1 < argc) {
             config.language = argv[++i];
         }
         else if ((strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--keycode") == 0) && i + 1 < argc) {
-            config.hotkey_keycode = static_cast<uint32_t>(std::atoi(argv[++i]));
+            try {
+                int keycode = std::stoi(argv[++i]);
+                if (keycode < 0) {
+                    std::cerr << "Warning: Invalid keycode, using default" << std::endl;
+                } else {
+                    config.hotkey_keycode = static_cast<uint32_t>(keycode);
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "Warning: Invalid keycode '" << argv[i] << "', using default" << std::endl;
+            }
         }
         else if (strcmp(argv[i], "--no-paste") == 0) {
             config.auto_paste = false;

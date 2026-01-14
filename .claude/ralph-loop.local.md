@@ -1,57 +1,77 @@
 ---
 active: true
 iteration: 1
-max_iterations: 500
-completion_promise: "TASK COMPLETE"
-started_at: "2026-01-08T17:33:32Z"
+max_iterations: 100
+completion_promise: "VOXTYPE_PRODUCTION_READY"
+started_at: "2026-01-14T00:00:00Z"
 ---
 
-Implement whisper accuracy improvements following RALPH_WIGGUM_ACCURACY_V2.md.
+Fix and improve VoxType following RALPH_WIGGUM_FIX_ALL.md.
 
-Execute phases in order:
+Execute phases 1-10 in order. For each phase:
+1. Implement the fixes described
+2. Build and verify no new warnings
+3. Run tests to ensure no regressions
+4. Commit changes with descriptive message
 
-**Phase 1**: Ask user about model upgrade (small.en 466MB for 92% accuracy vs base.en 85%). Skip if user declines.
+**54 issues to fix across 10 phases:**
 
-**Phase 2**: Optimize whisper parameters:
-- Lower no_speech_threshold from 0.5 to 0.3
-- Add compression_ratio_threshold = 2.4
-- Add temperature_inc = 0.2
-- Add logprob_threshold = -1.0
-- Test after each change
+## Phase 1: Critical Bug Fixes (DO FIRST)
+- Fix null pointer on std::getenv("HOME") in vocabulary.cpp:12
+- Fix unsafe std::atoi() in main.cpp:71,77 - use std::stoi with try/catch
+- Build and test
 
-**Phase 3**: Implement or integrate VAD:
-- Start with enhanced energy-based VAD
-- Consider Silero VAD if feasible
-- Test silence trimming works correctly
+## Phase 2: Thread Safety & Memory
+- Add mutex protection to global state in hotkey_macos.mm and tray_macos.mm
+- Replace raw new/delete with std::unique_ptr in hotkey_macos.mm:27-39
+- Fix memory leak in tray icons (add [release] calls in destroy_tray_icon)
+- Synchronize g_history vector access with mutex
 
-**Phase 4**: Enhance audio preprocessing:
-- Add Automatic Gain Control (AGC)
-- Test quiet speech is boosted correctly
+## Phase 3: Error Handling
+- Add try/catch around audio_processor_->process() in app.cpp:197
+- Improve whisper error messages with error codes in transcriber.cpp:115
+- Add user notification for "no speech detected" in app.cpp:225
 
-**Phase 5**: Build custom vocabulary system:
-- Create ~/.whispr/vocabulary.txt support
-- Load and apply to initial_prompt
-- Test proper nouns are recognized
+## Phase 4: Test Coverage
+- Fix operator precedence bug in test_text_processor.cpp:122
+- Create tests/test_integration.cpp with pipeline tests
+- Create tests/test_edge_cases.cpp for empty/short/long audio
 
-**Phase 6**: Create comprehensive testing framework:
-- Create test cases for clear speech, quiet speech, noisy speech, proper nouns
-- Create manual test script
-- Run all tests
+## Phase 5: UX Improvements
+- Add model loading progress callback to transcriber.cpp
+- Show confidence score in menu bar (tray_macos.mm)
+- Add optional sound feedback config options
 
-**Phase 7**: Benchmark and document:
-- Measure WER improvement
-- Document results in ACCURACY_RESULTS.md
+## Phase 6: Performance
+- Pre-compile regex patterns at startup in text_processor.cpp
+- Reuse buffers in audio_processor.cpp instead of allocating
+- Add processing time metrics logging
 
-After each phase:
-1. Build the code
-2. Run whispr and test manually
-3. Verify checklist items
-4. Commit changes
+## Phase 7: Security
+- Validate user input paths in main.cpp (no path traversal)
+- Sanitize vocabulary file content in vocabulary.cpp
 
-Output ACCURACY_V2_COMPLETE when:
-- All phases implemented
+## Phase 8: Documentation
+- Add Linux installation section to README.md
+- Create docs/CONFIGURATION.md with all options
+- Add Doxygen comments to public methods
+
+## Phase 9: Code Quality
+- Add const correctness throughout
+- Replace magic numbers with named constants in config.hpp
+- Extract common platform code patterns
+
+## Phase 10: Final Integration
+- Full clean build (rm -rf build && ./build.sh)
+- Run all tests (cd tests && ./run_tests.sh)
+- Manual testing checklist
+- Memory leak check with leaks or valgrind
+
+Output <promise>VOXTYPE_PRODUCTION_READY</promise> when:
+- All 10 phases complete
 - All tests pass
-- WER improved by 10%+ over baseline
-- Documentation complete
+- No memory leaks
+- No compiler warnings
+- Build succeeds on clean build
 
-If blocked, document the issue and suggest alternatives.
+If blocked after 3 attempts on any item, document and skip to next.
