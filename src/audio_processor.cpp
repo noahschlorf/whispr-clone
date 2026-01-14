@@ -1,9 +1,16 @@
 #include "audio_processor.hpp"
 #include <algorithm>
 #include <cmath>
+#include <chrono>
+#include <iostream>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
+#endif
+
+// Enable/disable timing logs (compile-time)
+#ifndef AUDIO_PROCESSOR_TIMING
+#define AUDIO_PROCESSOR_TIMING 0
 #endif
 
 namespace whispr {
@@ -44,6 +51,10 @@ void AudioProcessor::reset() {
 void AudioProcessor::process(std::vector<float>& audio) {
     if (audio.empty()) return;
 
+#if AUDIO_PROCESSOR_TIMING
+    auto start_time = std::chrono::high_resolution_clock::now();
+#endif
+
     // Apply processing in order
     if (config_.enable_highpass) {
         apply_highpass(audio);
@@ -61,6 +72,15 @@ void AudioProcessor::process(std::vector<float>& audio) {
     if (config_.enable_normalization) {
         apply_normalization(audio);
     }
+
+#if AUDIO_PROCESSOR_TIMING
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+    float audio_duration_ms = (static_cast<float>(audio.size()) / sample_rate_) * 1000.0f;
+    std::cout << "[AudioProcessor] Processed " << audio.size() << " samples ("
+              << audio_duration_ms << "ms audio) in " << duration_us << "us ("
+              << (audio_duration_ms * 1000.0f / duration_us) << "x realtime)" << std::endl;
+#endif
 }
 
 void AudioProcessor::apply_highpass(std::vector<float>& audio) {
