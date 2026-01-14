@@ -5,17 +5,17 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>whispr</string>
+    <string>VoxType</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.whispr.clone</string>
+    <string>com.voxtype.app</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Whispr</string>
+    <string>VoxType</string>
     <key>CFBundleDisplayName</key>
-    <string>Whispr</string>
+    <string>VoxType</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -29,8 +29,10 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Whispr needs microphone access to transcribe your speech.</string>
+    <string>VoxType needs microphone access to transcribe your speech.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Whispr needs accessibility access to paste transcribed text.</string>
+    <string>VoxType needs accessibility access to paste transcribed text.</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
 </dict>
 </plist>

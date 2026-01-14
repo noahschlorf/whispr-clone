@@ -4,7 +4,15 @@
 
 100% local, 100% private. No internet required.
 
-## Quick Install (macOS)
+## Easiest Install (Pre-built)
+
+1. Download **[VoxType.dmg](https://github.com/noahschlorf/whispr-clone/releases/latest)** from Releases
+2. Open the DMG and drag VoxType to Applications
+3. Open VoxType from Applications
+4. Grant Accessibility permissions when prompted
+5. **Done!** Hold Right Option to dictate.
+
+## Quick Install (Build from Source)
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/noahschlorf/whispr-clone/master/install.sh)"
