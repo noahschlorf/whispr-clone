@@ -5,6 +5,46 @@
 #include <algorithm>
 #include <filesystem>
 #include <cstdlib>
+#include <cctype>
+
+// Sanitize vocabulary content to prevent any potential injection
+static std::string sanitize_vocab_content(const std::string& content) {
+    std::string result;
+    result.reserve(content.size());
+
+    for (char c : content) {
+        // Allow only printable ASCII characters (32-126) and common whitespace
+        if ((c >= 32 && c <= 126) || c == '\t') {
+            result += c;
+        } else if (c == '\n' || c == '\r') {
+            // Normalize line endings
+            result += ' ';
+        }
+        // Skip other control characters
+    }
+
+    // Trim excessive whitespace
+    std::string trimmed;
+    bool prev_space = true;
+    for (char c : result) {
+        if (std::isspace(static_cast<unsigned char>(c))) {
+            if (!prev_space) {
+                trimmed += ' ';
+                prev_space = true;
+            }
+        } else {
+            trimmed += c;
+            prev_space = false;
+        }
+    }
+
+    // Trim trailing space
+    if (!trimmed.empty() && trimmed.back() == ' ') {
+        trimmed.pop_back();
+    }
+
+    return trimmed;
+}
 
 namespace whispr {
 
@@ -22,6 +62,12 @@ VocabularyConfig VocabularyLoader::load_from_file(const std::string& path) {
     VocabularyConfig vocab;
 
     if (path.empty()) return vocab;
+
+    // Security: check for path traversal
+    if (path.find("..") != std::string::npos) {
+        std::cerr << "Warning: Path traversal not allowed in vocabulary path" << std::endl;
+        return vocab;
+    }
 
     std::ifstream file(path);
     if (!file.is_open()) {
@@ -59,20 +105,24 @@ VocabularyConfig VocabularyLoader::load_from_file(const std::string& path) {
             continue;
         }
 
+        // Sanitize content before adding
+        std::string sanitized = sanitize_vocab_content(line);
+        if (sanitized.empty()) continue;
+
         // Add to appropriate section
         switch (current_section) {
             case Section::ProperNouns:
-                vocab.proper_nouns.push_back(line);
+                vocab.proper_nouns.push_back(sanitized);
                 break;
             case Section::TechnicalTerms:
-                vocab.technical_terms.push_back(line);
+                vocab.technical_terms.push_back(sanitized);
                 break;
             case Section::CommonPhrases:
-                vocab.common_phrases.push_back(line);
+                vocab.common_phrases.push_back(sanitized);
                 break;
             case Section::None:
                 // Default to proper nouns if no section specified
-                vocab.proper_nouns.push_back(line);
+                vocab.proper_nouns.push_back(sanitized);
                 break;
         }
     }

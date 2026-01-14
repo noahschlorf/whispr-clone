@@ -4,6 +4,40 @@
 #include <csignal>
 #include <cstring>
 #include <stdexcept>
+#include <filesystem>
+
+// Validate a user-provided path for security
+static bool is_safe_path(const std::string& path) {
+    // Check for path traversal attempts
+    if (path.find("..") != std::string::npos) {
+        std::cerr << "Error: Path traversal not allowed in path" << std::endl;
+        return false;
+    }
+
+    // Check for null bytes (injection attempt)
+    if (path.find('\0') != std::string::npos) {
+        std::cerr << "Error: Invalid characters in path" << std::endl;
+        return false;
+    }
+
+    // Resolve to canonical path and check it exists
+    try {
+        std::filesystem::path p(path);
+        if (std::filesystem::exists(p)) {
+            // Ensure it's a directory
+            if (!std::filesystem::is_directory(p)) {
+                std::cerr << "Error: Model path must be a directory" << std::endl;
+                return false;
+            }
+        }
+        // If doesn't exist, that's OK - we'll create or fail later
+    } catch (const std::filesystem::filesystem_error& e) {
+        std::cerr << "Error: Invalid path - " << e.what() << std::endl;
+        return false;
+    }
+
+    return true;
+}
 
 static whispr::App* g_app = nullptr;
 
@@ -66,7 +100,12 @@ int main(int argc, char* argv[]) {
             }
         }
         else if ((strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--model-dir") == 0) && i + 1 < argc) {
-            config.model_dir = argv[++i];
+            std::string model_dir = argv[++i];
+            if (!is_safe_path(model_dir)) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            config.model_dir = model_dir;
         }
         else if ((strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--threads") == 0) && i + 1 < argc) {
             try {
