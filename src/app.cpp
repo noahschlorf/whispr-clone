@@ -3,6 +3,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <stdexcept>
 
 #ifdef PLATFORM_MACOS
 extern "C" void run_macos_event_loop();
@@ -196,8 +197,13 @@ void App::stop_recording() {
 
     // Preprocess audio if enabled
     if (audio_processor_) {
-        audio_processor_->process(audio_data);
-        audio_processor_->reset();  // Reset filter state for next recording
+        try {
+            audio_processor_->process(audio_data);
+            audio_processor_->reset();  // Reset filter state for next recording
+        } catch (const std::exception& e) {
+            std::cerr << "Audio processing error: " << e.what() << std::endl;
+            // Continue with unprocessed audio rather than failing completely
+        }
     }
 
     // Trim silence / extract speech for better accuracy
@@ -224,6 +230,10 @@ void App::stop_recording() {
 
         if (audio_data.empty()) {
             std::cerr << "No speech detected in recording" << std::endl;
+            // Brief error state to notify user visually
+            state_.store(AppState::Error);
+            update_tray_state(AppState::Error);
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
             state_.store(AppState::Idle);
             update_tray_state(AppState::Idle);
             return;

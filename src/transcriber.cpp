@@ -113,7 +113,17 @@ TranscriptionResult Transcriber::transcribe_with_profile(const std::vector<float
     // Run inference
     int ret = whisper_full(ctx_, wparams, audio.data(), static_cast<int>(audio.size()));
     if (ret != 0) {
-        result.error = "Whisper inference failed";
+        // Provide detailed error message with error code
+        std::string error_detail;
+        switch (ret) {
+            case -1: error_detail = "failed to compute mel spectrogram"; break;
+            case -2: error_detail = "failed to encode audio"; break;
+            case -3: error_detail = "failed to decode audio"; break;
+            case -4: error_detail = "failed to auto-detect language"; break;
+            default: error_detail = "unknown error";
+        }
+        result.error = "Whisper inference failed (code " + std::to_string(ret) + "): " + error_detail;
+        std::cerr << result.error << std::endl;
         return result;
     }
 
