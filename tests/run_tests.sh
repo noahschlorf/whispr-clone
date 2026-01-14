@@ -38,6 +38,31 @@ g++ -std=c++17 -O2 \
         exit 1
     }
 
+# Build integration tests
+echo "Building integration tests..."
+g++ -std=c++17 -O2 \
+    -I"$PROJECT_DIR/include" \
+    -o test_integration \
+    test_integration.cpp \
+    "$PROJECT_DIR/src/audio_processor.cpp" \
+    "$PROJECT_DIR/src/text_processor.cpp" \
+    -lm 2>&1 || {
+        echo "Failed to build integration tests"
+        exit 1
+    }
+
+# Build edge case tests
+echo "Building edge case tests..."
+g++ -std=c++17 -O2 \
+    -I"$PROJECT_DIR/include" \
+    -o test_edge_cases \
+    test_edge_cases.cpp \
+    "$PROJECT_DIR/src/audio_processor.cpp" \
+    -lm 2>&1 || {
+        echo "Failed to build edge case tests"
+        exit 1
+    }
+
 echo ""
 
 # Run tests
@@ -55,6 +80,20 @@ echo "Running text processor tests..."
 }
 
 echo ""
+echo "Running integration tests..."
+./test_integration || {
+    echo "Integration tests FAILED"
+    exit 1
+}
+
+echo ""
+echo "Running edge case tests..."
+./test_edge_cases || {
+    echo "Edge case tests FAILED"
+    exit 1
+}
+
+echo ""
 echo "==================================================="
 echo "     All Automated Tests Passed!"
 echo "==================================================="
@@ -62,4 +101,4 @@ echo ""
 echo "To run manual accuracy tests, use: ./manual_test.sh"
 
 # Clean up
-rm -f test_audio_processor test_text_processor
+rm -f test_audio_processor test_text_processor test_integration test_edge_cases

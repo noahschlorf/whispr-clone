@@ -119,7 +119,7 @@ void test_complex_sentences() {
     std::string result = proc.process(input);
 
     // Should remove fillers and capitalize
-    assert(result[0] == 'S' || result[0] == 'I' && "Should start with capital");
+    assert((result[0] == 'S' || result[0] == 'I') && "Should start with capital");
     assert(result.find("um") == std::string::npos && "No 'um'");
     assert(result.find("you know") == std::string::npos && "No 'you know'");
 
