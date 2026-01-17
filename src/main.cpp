@@ -6,6 +6,48 @@
 #include <stdexcept>
 #include <filesystem>
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#include <unistd.h>
+#endif
+
+// Get the resources directory if running from a macOS app bundle
+// Returns empty string if not in a bundle or on other platforms
+static std::string get_bundle_resources_path() {
+#ifdef __APPLE__
+    // Get the executable path
+    char path[PATH_MAX];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) == 0) {
+        std::filesystem::path exe_path(path);
+        exe_path = std::filesystem::canonical(exe_path);
+
+        // Check if we're in a .app bundle: .../VoxType.app/Contents/MacOS/VoxType
+        std::filesystem::path parent = exe_path.parent_path();  // MacOS
+        if (parent.filename() == "MacOS") {
+            std::filesystem::path contents = parent.parent_path();  // Contents
+            if (contents.filename() == "Contents") {
+                std::filesystem::path resources = contents / "Resources";
+                if (std::filesystem::exists(resources)) {
+                    return resources.string();
+                }
+            }
+        }
+    }
+#endif
+    return "";
+}
+
+// Change to bundle resources directory so Metal shader can be found
+static void setup_bundle_environment(const std::string& resources_path) {
+    if (!resources_path.empty()) {
+        // Change to resources directory for Metal shader discovery
+        if (chdir(resources_path.c_str()) == 0) {
+            // Metal shader should now be findable in current directory
+        }
+    }
+}
+
 // Validate a user-provided path for security
 static bool is_safe_path(const std::string& path) {
     // Check for path traversal attempts
@@ -76,6 +118,24 @@ void print_usage(const char* program) {
 
 int main(int argc, char* argv[]) {
     whispr::Config config;
+
+    // Check if running from app bundle and set default model path
+    std::string bundle_resources = get_bundle_resources_path();
+    if (!bundle_resources.empty()) {
+        // Change to resources directory so Metal shader can be found
+        setup_bundle_environment(bundle_resources);
+
+        std::filesystem::path models_path = std::filesystem::path(bundle_resources) / "models";
+        if (std::filesystem::exists(models_path)) {
+            config.model_dir = models_path.string();
+
+            // Also check for accurate model and use it if available
+            std::filesystem::path small_model = models_path / "ggml-small.en.bin";
+            if (std::filesystem::exists(small_model)) {
+                config.model_quality = whispr::ModelQuality::Accurate;
+            }
+        }
+    }
 
     // Parse arguments
     for (int i = 1; i < argc; ++i) {

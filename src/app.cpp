@@ -123,13 +123,21 @@ void App::shutdown() {
 }
 
 int App::run() {
-    if (!hotkey_->start()) {
-        std::cerr << "Failed to start hotkey listener" << std::endl;
-        return 1;
+    bool hotkey_started = hotkey_->start();
+    if (!hotkey_started) {
+        std::cerr << "Warning: Failed to start hotkey listener" << std::endl;
+        std::cerr << "Hotkey won't work until accessibility permissions are granted." << std::endl;
+        std::cerr << "Go to: System Settings > Privacy & Security > Accessibility" << std::endl;
+        std::cerr << "Add VoxType and enable it, then restart the app.\n" << std::endl;
+        // Continue running anyway - user can still use menu bar to quit
     }
 
     std::cout << "\n=== VoxType Ready ===" << std::endl;
-    std::cout << "Hold the hotkey to record, release to transcribe and paste." << std::endl;
+    if (hotkey_started) {
+        std::cout << "Hold the hotkey to record, release to transcribe and paste." << std::endl;
+    } else {
+        std::cout << "NOTE: Hotkey disabled - grant Accessibility permissions and restart." << std::endl;
+    }
     std::cout << "Menu bar icon should appear in your menu bar.\n" << std::endl;
 
 #ifdef PLATFORM_MACOS
